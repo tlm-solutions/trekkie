@@ -30,13 +30,14 @@ r2d2 = "*"
 # utils
 chrono = "0.4"
 uuid = { version = "*", features = ["serde", "v4"] }
-#tokio = "*"
 env_logger = "*"
 log = "*"
 rand = "*"
-#form-data = "*"
-#mime = "*"
 
 futures = "0.3"
 utoipa = { version = "2", features = ["actix_extras"] }
-utoipa-swagger-ui = { version = "*", features = ["actix-web"] }
+#utoipa-swagger-ui = { version = "2", features = ["actix-web"] }
+
+#utoipa = { git = "https://github.com/revol-xut/utoipa.git", features = ["actix_extras"] }
+
+
