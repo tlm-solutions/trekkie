@@ -1,0 +1,47 @@
+pub mod run;
+pub mod user;
+
+use actix_web::{
+    error, HttpResponse,
+    http::{header::ContentType, StatusCode},
+};
+
+use derive_more::{Display, Error};
+use utoipa::{ToSchema, OpenApi};
+use serde::{Serialize, Deserialize};
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct Response {
+    success: bool
+}
+
+#[derive(Debug, Display, Error)]
+pub enum ServerError {
+    #[display(fmt = "internal error")]
+    InternalError,
+
+    #[display(fmt = "bad request")]
+    BadClientData,
+}
+
+impl error::ResponseError for ServerError {
+    fn error_response(&self) -> HttpResponse {
+        HttpResponse::build(self.status_code())
+            .insert_header(ContentType::html())
+            .body(self.to_string())
+    }
+
+    fn status_code(&self) -> StatusCode {
+        match *self {
+            ServerError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            ServerError::BadClientData => StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
+
+#[derive(OpenApi)]
+#[openapi(paths(run::travel_submit_run), paths(run::travel_submit_run), components(schemas(Response)))]
+pub struct ApiDoc;
+
+
