@@ -1,4 +1,3 @@
-
 use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
@@ -21,13 +20,13 @@ use actix_multipart::Multipart;
 use diesel::RunQueryDsl;
 
 #[derive(Serialize, Deserialize, ToSchema)]
-pub struct SubmittTravel {
+pub struct SubmitTravel {
     pub gpx_id: Uuid,
     pub vehicles: Vec<FinishedMeasurementInterval>
 }
 
 #[derive(Serialize, Deserialize, ToSchema)]
-pub struct SubmittedFile {
+pub struct SubmitFile {
     pub success: bool,
     pub gpx_id: Uuid 
 }
@@ -44,9 +43,11 @@ pub struct SubmittedFile {
 pub async fn travel_submit_run(
     pool: web::Data<DbPool>,
     user: Identity,
-    submission: web::Json<SubmittTravel>,
+    submission: web::Json<SubmitTravel>,
     _req: HttpRequest,
     ) ->  Result<web::Json<Response>, ServerError> {
+
+    // getting the database connection from pool
     let mut database_connection = match pool.get() {
          Ok(conn) => conn,
          Err(e) => {
@@ -54,8 +55,6 @@ pub async fn travel_submit_run(
              return Err(ServerError::InternalError);
          }
     };
-
-    // todo: authenticate
 
     use dump_dvb::schema::trekkie_runs::dsl::trekkie_runs;
     for measurement in (*submission).vehicles.clone().into_iter() {
@@ -88,7 +87,7 @@ pub async fn travel_submit_run(
     post,
     path = "/travel/submit/gpx",
     responses(
-        (status = 200, description = "gpx file was successfully submitted", body = crate::routes::SubmittedFile),
+        (status = 200, description = "gpx file was successfully submitted", body = crate::routes::SubmitFile),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -97,7 +96,7 @@ pub async fn travel_file_upload(
     _user: Identity,
     mut payload: Multipart,
     _req: HttpRequest,
-) ->  Result<web::Json<SubmittedFile>, ServerError> {
+) ->  Result<web::Json<SubmitFile>, ServerError> {
     let default_gpx_path = "/var/lib/trekkie/gpx/".to_string();
     let gpx_path = std::env::var("GPX_PATH").unwrap_or(default_gpx_path);
     let run_uuid = Uuid::new_v4();
@@ -135,6 +134,6 @@ pub async fn travel_file_upload(
         }
     }
 
-    Ok(web::Json(SubmittedFile { success: true , gpx_id: run_uuid }))
+    Ok(web::Json(SubmitFile { success: true , gpx_id: run_uuid }))
 }
 

@@ -41,7 +41,18 @@ impl error::ResponseError for ServerError {
 
 
 #[derive(OpenApi)]
-#[openapi(paths(run::travel_submit_run), paths(run::travel_submit_run), components(schemas(Response)))]
+#[openapi(
+    paths(run::travel_submit_run), 
+    paths(run::travel_file_upload), 
+    paths(user::user_login),
+    paths(user::user_create), 
+    components(schemas(Response)),
+    components(schemas(user::UserCreation)),
+    components(schemas(user::UserLogin)),
+    components(schemas(run::SubmitFile)),
+    components(schemas(run::SubmitTravel)),
+    )
+]
 pub struct ApiDoc;
 
 
