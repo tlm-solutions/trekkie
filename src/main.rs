@@ -22,6 +22,7 @@ use actix_session::storage::RedisActorSessionStore;
 use utoipa::OpenApi;
 
 use std::env;
+use std::fmt::format;
 use std::fs;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
@@ -42,10 +43,20 @@ pub fn create_db_pool() -> DbPool {
         env::var("POSTGRES_PORT").unwrap_or(default_postgres_port.clone())
     );
 
-    println!("Connecting to postgres database {}", &database_url);
+    debug!("Connecting to postgres database {}", &database_url);
     let manager = ConnectionManager::<PgConnection>::new(database_url);
 
     Pool::new(manager).expect("Failed to create pool.")
+}
+
+pub fn get_redis_uri() -> String {
+    let default_redis_port = "6379".to_string();
+    let default_redis_host = "127.0.0.1".to_string();
+
+    format!("redis://{}:{}",
+        std::env::var("REDIS_HOST").unwrap_or(default_redis_host),
+        std::env::var("REDIS_PORT").unwrap_or(default_redis_port)
+    )
 }
 
 #[actix_web::main]
@@ -54,14 +65,14 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     if args.swagger {
-        println!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
+        info!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
         return Ok(());
     }
-    println!("starting server ... ");
+
     info!("Starting Data Collection Server ... ");
     let host = args.api_host.as_str();
     let port = args.port;
-    println!("Listening on: {}:{}", host, port);
+    debug!("Listening on: {}:{}", host, port);
 
     let connection_pool = web::Data::new(create_db_pool());
     let secret_key = Key::generate();
@@ -69,7 +80,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(IdentityMiddleware::default())
             .wrap(SessionMiddleware::new(
-                 RedisActorSessionStore::new("redis://127.0.0.1:6379"),
+                 RedisActorSessionStore::new(get_redis_uri()),
                  secret_key.clone()
             ))
             .app_data(connection_pool.clone())

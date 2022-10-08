@@ -42,7 +42,7 @@ pub async fn user_create(
     let mut database_connection = match pool.get() {
          Ok(conn) => conn,
          Err(e) => {
-             println!("cannot get connection from connection pool {:?}", e);
+             error!("cannot get connection from connection pool {:?}", e);
              return Err(ServerError::InternalError);
          }
     };
@@ -56,7 +56,7 @@ pub async fn user_create(
     let hashed_password = match hash_password(&password) {
         Some(data) => data,
         None => {
-            println!("cannot hash user password");
+            error!("cannot hash user password");
             return Err(ServerError::BadClientData);
         }
     };
@@ -74,25 +74,22 @@ pub async fn user_create(
     })
     .execute(&mut database_connection) {
         Err(e) => {
-            println!("while trying to insert trekkie user {:?}", e);
+            error!("while trying to insert trekkie user {:?}", e);
             return Err(ServerError::BadClientData);
         }
         _ => {}
     };
 
-    println!("creating new user with id {}", user_id);
+    info!("creating new user with id {}", user_id);
 
     match Identity::login(&req.extensions(), user_id.to_string().into()) {
-        Ok(_) => {
-            println!("successfully set session");
-        }
+        Ok(_) => {}
         Err(e) => {
-            println!("cannot create session maybe the redis is not running. {:?}", e);
+            error!("cannot create session maybe the redis is not running. {:?}", e);
             return Err(ServerError::BadClientData);
         }
     };
 
-    println!("returning struct");
     Ok(web::Json(UserCreation { 
         success: true,
         user_id,
