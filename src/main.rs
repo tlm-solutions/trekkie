@@ -42,7 +42,7 @@ pub fn create_db_pool() -> DbPool {
         env::var("POSTGRES_PORT").unwrap_or(default_postgres_port.clone())
     );
 
-    debug!("Connecting to postgres database {}", &database_url);
+    println!("Connecting to postgres database {}", &database_url);
     let manager = ConnectionManager::<PgConnection>::new(database_url);
 
     Pool::new(manager).expect("Failed to create pool.")
@@ -56,11 +56,11 @@ async fn main() -> std::io::Result<()> {
         println!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
         return Ok(());
     }
-
+    println!("starting server ... ");
     info!("Starting Data Collection Server ... ");
     let host = args.api_host.as_str();
     let port = args.port;
-    debug!("Listening on: {}:{}", host, port);
+    println!("Listening on: {}:{}", host, port);
 
     let connection_pool = web::Data::new(create_db_pool());
     let secret_key = Key::generate();

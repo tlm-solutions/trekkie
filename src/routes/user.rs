@@ -42,7 +42,7 @@ pub async fn user_create(
     let mut database_connection = match pool.get() {
          Ok(conn) => conn,
          Err(e) => {
-             error!("cannot get connection from connection pool {:?}", e);
+             println!("cannot get connection from connection pool {:?}", e);
              return Err(ServerError::InternalError);
          }
     };
@@ -56,12 +56,12 @@ pub async fn user_create(
     let hashed_password = match hash_password(&password) {
         Some(data) => data,
         None => {
-            error!("cannot hash user password");
+            println!("cannot hash user password");
             return Err(ServerError::BadClientData);
         }
     };
     
-    info!("creating new user with id {}", user_id);
+    println!("creating new user with id {}", user_id);
 
     use dump_dvb::schema::users::dsl::users;
     match diesel::insert_into(users)
@@ -76,7 +76,7 @@ pub async fn user_create(
     })
     .execute(&mut database_connection) {
         Err(e) => {
-            error!("while trying to insert trekkie user {:?}", e);
+            println!("while trying to insert trekkie user {:?}", e);
         }
         _ => {}
     };
