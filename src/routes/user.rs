@@ -83,13 +83,16 @@ pub async fn user_create(
     println!("creating new user with id {}", user_id);
 
     match Identity::login(&req.extensions(), user_id.to_string().into()) {
-        Ok(_) => {}
+        Ok(_) => {
+            println!("successfully set session");
+        }
         Err(e) => {
             println!("cannot create session maybe the redis is not running. {:?}", e);
             return Err(ServerError::BadClientData);
         }
     };
 
+    println!("returning struct");
     Ok(web::Json(UserCreation { 
         success: true,
         user_id,
