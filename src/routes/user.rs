@@ -52,7 +52,7 @@ pub async fn user_create(
         .take(32)
         .map(char::from)
         .collect();
-    
+
     let hashed_password = match hash_password(&password) {
         Some(data) => data,
         None => {
@@ -60,7 +60,6 @@ pub async fn user_create(
             return Err(ServerError::BadClientData);
         }
     };
-    
 
     use dump_dvb::schema::users::dsl::users;
     match diesel::insert_into(users)
@@ -86,7 +85,7 @@ pub async fn user_create(
     match Identity::login(&req.extensions(), user_id.to_string().into()) {
         Ok(_) => {}
         Err(e) => {
-            error!("cannot create session maybe the redis is not running.");
+            println!("cannot create session maybe the redis is not running. {:?}", e);
             return Err(ServerError::BadClientData);
         }
     };
