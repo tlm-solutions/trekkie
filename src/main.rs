@@ -53,7 +53,7 @@ pub fn get_redis_uri() -> String {
     let default_redis_port = "6379".to_string();
     let default_redis_host = "127.0.0.1".to_string();
 
-    format!("redis://{}:{}",
+    format!("{}:{}",
         std::env::var("REDIS_HOST").unwrap_or(default_redis_host),
         std::env::var("REDIS_PORT").unwrap_or(default_redis_port)
     )
