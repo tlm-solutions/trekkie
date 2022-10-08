@@ -61,7 +61,6 @@ pub async fn user_create(
         }
     };
     
-    println!("creating new user with id {}", user_id);
 
     use dump_dvb::schema::users::dsl::users;
     match diesel::insert_into(users)
@@ -77,11 +76,20 @@ pub async fn user_create(
     .execute(&mut database_connection) {
         Err(e) => {
             println!("while trying to insert trekkie user {:?}", e);
+            return Err(ServerError::BadClientData);
         }
         _ => {}
     };
 
-    Identity::login(&req.extensions(), user_id.to_string().into()).unwrap();
+    println!("creating new user with id {}", user_id);
+
+    match Identity::login(&req.extensions(), user_id.to_string().into()) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("cannot create session maybe the redis is not running.");
+            return Err(ServerError::BadClientData);
+        }
+    };
 
     Ok(web::Json(UserCreation { 
         success: true,
@@ -129,7 +137,13 @@ pub async fn user_login(
     };
 
     if verify_password(&body.password, &user.password) {
-        Identity::login(&req.extensions(), user.id.to_string().into()).unwrap();
+        match Identity::login(&req.extensions(), user.id.to_string().into()) {
+            Ok(_) => {}
+            Err(e) => {
+                error!("cannot create session maybe the redis is not running.");
+                return Err(ServerError::BadClientData);
+            }
+        };
 
         Ok(web::Json(Response { success: true }))
     } else {
