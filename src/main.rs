@@ -50,6 +50,7 @@ pub fn create_db_pool() -> DbPool {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
     let args = Args::parse();
 
     if args.swagger {
