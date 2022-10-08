@@ -3,7 +3,7 @@ use crate::DbPool;
 
 use dump_dvb::management::{user::{Role, User, hash_password, verify_password}};
 
-use log::error;
+use log::{error, info};
 use uuid::Uuid;
 
 use actix_identity::Identity;
@@ -57,9 +57,11 @@ pub async fn user_create(
         Some(data) => data,
         None => {
             error!("cannot hash user password");
-             return Err(ServerError::BadClientData);
+            return Err(ServerError::BadClientData);
         }
     };
+    
+    info!("creating new user with id {}", user_id);
 
     use dump_dvb::schema::users::dsl::users;
     match diesel::insert_into(users)
@@ -110,6 +112,8 @@ pub async fn user_login(
          }
     };
 
+    info!("user with id {} has logged in", &body.user_id);
+
     use dump_dvb::schema::users::dsl::users;
     use dump_dvb::schema::users::id;
     let user = match users 
@@ -129,7 +133,6 @@ pub async fn user_login(
 
         Ok(web::Json(Response { success: true }))
     } else {
-
         Ok(web::Json(Response { success: false }))
     }
 }
