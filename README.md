@@ -6,4 +6,19 @@
 
 This service takes your gps tracks and times and regenerates the position mapping.
 
+## Building
+
+```bash
+    $ nix build
+```
+
+## Usage 
+
+```mermaid
+  graph TD;
+      A-->B;
+      A-->C;
+      B-->D;
+      C-->D;
+```
 
