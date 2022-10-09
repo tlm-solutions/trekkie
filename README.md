@@ -15,10 +15,11 @@ This service takes your gps tracks and times and regenerates the position mappin
 ## Usage 
 
 ```mermaid
-  graph TD;
-      A-->B;
-      A-->C;
-      B-->D;
-      C-->D;
+graph TD
+    A[Start] -->|/user/login| B(Authenticated)
+    A[Start] -->|/user/create| B(Authenticated)
+    B -->|/travel/submit/gpx| C(Travel created & GPX Uploaded)
+    C -->|/travel/submit/run| D(Upload Measurement Intervals)
+    D --> E(Done)
 ```
 
