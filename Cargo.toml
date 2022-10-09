@@ -36,8 +36,10 @@ rand = "*"
 
 futures = "0.3"
 utoipa = { version = "2", features = ["actix_extras"] }
-utoipa-swagger-ui = { version = "2", features = ["actix-web"] }
+#utoipa-swagger-ui = { version = "2", features = ["actix-web"] }
 
+utoipa-swagger-ui = { git = "https://gitea.tassilo-tanneberger.de/revol-xut/utoipa-swagger.git", version = "2",features = ["actix-web"] }
+#utoipa-swagger-ui = { path = "../utoipa/utoipa-swagger-ui", features = ["actix./-web"] }
 #utoipa = { git = "https://github.com/revol-xut/utoipa.git", features = ["actix_extras"] }
 
 

@@ -23,7 +23,6 @@ pub struct Args {
 
     #[arg(short, long, action)]
     pub swagger: bool,
-
 }
 
 #[derive(Deserialize, Serialize, Debug)]
