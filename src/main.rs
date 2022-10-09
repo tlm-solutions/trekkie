@@ -20,6 +20,7 @@ use actix_session::SessionMiddleware;
 use actix_session::storage::RedisActorSessionStore;
 
 use utoipa::OpenApi;
+use utoipa_swagger_ui::{SwaggerUi, Url};
 
 use std::env;
 use std::fmt::format;
@@ -65,7 +66,7 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     if args.swagger {
-        info!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
+        println!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
         return Ok(());
     }
 
@@ -88,6 +89,12 @@ async fn main() -> std::io::Result<()> {
             .route("/travel/submit/run", web::post().to(routes::run::travel_submit_run))
             .route("/user/create", web::post().to(routes::user::user_create))
             .route("/user/login", web::post().to(routes::user::user_login))
+            .service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
+                (
+                    Url::new("api", "/api-doc/openapi.json"),
+                    routes::ApiDoc::openapi(),
+                ),
+            ]))
     })
     .bind((host, port))?
     .run()

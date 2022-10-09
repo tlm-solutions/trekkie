@@ -13,7 +13,7 @@ pub struct Response {
 #[clap(name = "dump-dvb telegram collection sink")]
 #[clap(author = "dvb-dump@protonmail.com")]
 #[clap(version = "0.1.0")]
-#[clap(about = "data collection server", long_about = None)]
+#[clap(about = "gps track collection server", long_about = None)]
 pub struct Args {
     #[arg(short, long, default_value_t = String::from("127.0.0.1"))]
     pub api_host: String,
