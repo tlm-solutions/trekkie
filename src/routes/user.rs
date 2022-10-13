@@ -13,20 +13,31 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 
+/// Returnes information about new trekkie user which should be saved persistently
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserCreation {
-    pub success: bool,
+    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000").unwrap())]
     pub user_id: Uuid,
+
+    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000").unwrap())]
     pub password: String
 }
 
 
+/// This struct is used for authentication if the request is successfull a session cookie is
+/// returned
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserLogin{
+    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000"))]
     pub user_id: Uuid,
+
+    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000"))]
     pub password: String
 }
 
+/// This endpoint if creating minimal and unpriviledged trekkie users
+/// if the call was succesfull user information and a session cookie are
+/// returned
 #[utoipa::path(
     post,
     path = "/user/create",
@@ -91,13 +102,12 @@ pub async fn user_create(
     };
 
     Ok(web::Json(UserCreation { 
-        success: true,
         user_id,
         password
     }))
 }
 
-
+/// Sends user credentials to the server if they are correct a session cookie is set.
 #[utoipa::path(
     post,
     path = "/user/login",
@@ -139,7 +149,7 @@ pub async fn user_login(
         match Identity::login(&req.extensions(), user.id.to_string().into()) {
             Ok(_) => {}
             Err(e) => {
-                error!("cannot create session maybe the redis is not running.");
+                error!("cannot create session maybe the redis is not running. {:?}", e);
                 return Err(ServerError::BadClientData);
             }
         };

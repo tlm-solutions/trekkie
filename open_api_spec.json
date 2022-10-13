@@ -1,0 +1,227 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "trekkie",
+    "description": "",
+    "contact": {
+      "name": "",
+      "email": ""
+    },
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/travel/submit/gpx": {
+      "post": {
+        "tags": [
+          "run"
+        ],
+        "summary": "Takes the gpx file saves it and returnes the travel id",
+        "description": "Takes the gpx file saves it and returnes the travel id\n",
+        "operationId": "travel_file_upload",
+        "responses": {
+          "200": {
+            "description": "gpx file was successfully submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.routes.SubmitFile"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "postgres pool error"
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/travel/submit/list": {
+      "get": {
+        "tags": [
+          "run"
+        ],
+        "summary": "Takes the gpx file saves it and returnes the travel id",
+        "description": "Takes the gpx file saves it and returnes the travel id\n",
+        "operationId": "travel_list",
+        "responses": {
+          "200": {
+            "description": "returnes old measurements",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Vec"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "postgres pool error"
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/travel/submit/run": {
+      "post": {
+        "tags": [
+          "run"
+        ],
+        "summary": "This endpoints if submitting measurement intervals that belong to the previous submitted gpx",
+        "description": "This endpoints if submitting measurement intervals that belong to the previous submitted gpx\nfile.\n",
+        "operationId": "travel_submit_run",
+        "responses": {
+          "200": {
+            "description": "travel was successfully submitted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.routes.Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "postgres pool error"
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/user/create": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "This endpoint if creating minimal and unpriviledged trekkie users",
+        "description": "This endpoint if creating minimal and unpriviledged trekkie users\nif the call was succesfull user information and a session cookie are\nreturned\n",
+        "operationId": "user_create",
+        "responses": {
+          "200": {
+            "description": "trekkie user was successfully created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.routes.UserCreation"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "postgres pool error"
+          }
+        },
+        "deprecated": false
+      }
+    },
+    "/user/login": {
+      "post": {
+        "tags": [
+          "user"
+        ],
+        "summary": "Sends user credentials to the server if they are correct a session cookie is set.",
+        "description": "Sends user credentials to the server if they are correct a session cookie is set.\n",
+        "operationId": "user_login",
+        "responses": {
+          "200": {
+            "description": "trekkie user was successfully logged in",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/crate.routes.Response"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "postgres pool error"
+          }
+        },
+        "deprecated": false
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Response": {
+        "type": "object",
+        "description": "Standard Response to signal if a request was successfull or not",
+        "required": [
+          "success"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "SubmitFile": {
+        "type": "object",
+        "description": "This model is returned after uploading a file it returnes the travel id which is used for",
+        "required": [
+          "gpx_id"
+        ],
+        "properties": {
+          "gpx_id": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      },
+      "SubmitTravel": {
+        "type": "object",
+        "description": "This model is needed after submitting a file the id references the id in the SubmitFile model.",
+        "required": [
+          "gpx_id",
+          "vehicles"
+        ],
+        "properties": {
+          "gpx_id": {
+            "$ref": "#/components/schemas/Uuid"
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FinishedMeasurementInterval"
+            }
+          }
+        }
+      },
+      "UserCreation": {
+        "type": "object",
+        "description": "Returnes information about new trekkie user which should be saved persistently",
+        "required": [
+          "user_id",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "user_id": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      },
+      "UserLogin": {
+        "type": "object",
+        "description": "This struct is used for authentication if the request is successfull a session cookie is",
+        "required": [
+          "user_id",
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "user_id": {
+            "$ref": "#/components/schemas/Uuid"
+          }
+        }
+      }
+    }
+  }
+}

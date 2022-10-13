@@ -2,8 +2,7 @@ use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
 use dump_dvb::measurements::FinishedMeasurementInterval;
-
-use dump_dvb::trekkie::InsertTrekkieRun;
+use dump_dvb::trekkie::{InsertTrekkieRun, TrekkieRun};
 
 use utoipa::ToSchema;
 use serde::{Serialize, Deserialize};
@@ -17,21 +16,35 @@ use std::io::Write;
 use actix_identity::Identity;
 use actix_web::{web, HttpRequest};
 use actix_multipart::Multipart;
-use diesel::RunQueryDsl;
+use diesel::{RunQueryDsl, QueryDsl, ExpressionMethods};
 
+/// This model is needed after submitting a file the id references the id in the SubmitFile model.
+/// The vehicles are measurements intervals recording start / end and which vehicle in the city was
+/// taken
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravel {
     pub gpx_id: Uuid,
+
+    #[schema(example = "
+    [ {
+        start: Utc::now().naive_utc(),
+        end: Utc::now().naive_utc(),
+        line: 69,
+        run: 42,
+        region: 0
+    } ]")]
     pub vehicles: Vec<FinishedMeasurementInterval>
 }
 
+/// This model is returned after uploading a file it returnes the travel id which is used for
+/// submitting the measurements intervals with the SubmitTravel model
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitFile {
-    pub success: bool,
-    pub gpx_id: Uuid 
+    pub gpx_id: Uuid
 }
 
-
+/// This endpoints if submitting measurement intervals that belong to the previous submitted gpx
+/// file.
 #[utoipa::path(
     post,
     path = "/travel/submit/run",
@@ -82,7 +95,7 @@ pub async fn travel_submit_run(
 }
 
 
-
+/// Takes the gpx file saves it and returnes the travel id
 #[utoipa::path(
     post,
     path = "/travel/submit/gpx",
@@ -134,6 +147,47 @@ pub async fn travel_file_upload(
         }
     }
 
-    Ok(web::Json(SubmitFile { success: true , gpx_id: run_uuid }))
+    Ok(web::Json(SubmitFile { gpx_id: run_uuid }))
+}
+
+/// Takes the gpx file saves it and returnes the travel id
+#[utoipa::path(
+    get,
+    path = "/travel/submit/list",
+    responses(
+        (status = 200, description = "returnes old measurements", body = Vec<TrekkieRun>),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
+pub async fn travel_list(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    _req: HttpRequest,
+) ->  Result<web::Json<Vec<TrekkieRun>>, ServerError> {
+    // getting the database connection from pool
+    let mut database_connection = match pool.get() {
+         Ok(conn) => conn,
+         Err(e) => {
+             error!("cannot get connection from connection pool {:?}", e);
+             return Err(ServerError::InternalError);
+         }
+    };
+
+    use dump_dvb::schema::trekkie_runs::owner;
+    use dump_dvb::schema::trekkie_runs::dsl::trekkie_runs;
+
+    match trekkie_runs
+        .filter(owner.eq(Uuid::parse_str(&user.id().unwrap()).unwrap()))
+        .load::<TrekkieRun>(&mut database_connection){
+        Ok(value) => {
+            Ok(web::Json(value))
+        }
+        Err(e) => {
+            error!("was unable runs for user with error {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+
+    }
+
 }
 

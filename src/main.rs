@@ -20,10 +20,8 @@ use actix_session::SessionMiddleware;
 use actix_session::storage::RedisActorSessionStore;
 
 use utoipa::OpenApi;
-//use utoipa_swagger_ui::{SwaggerUi, Url};
 
 use std::env;
-use std::fmt::format;
 use std::fs;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
@@ -87,6 +85,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(connection_pool.clone())
             .service(web::resource("/travel/submit/gpx").route(web::post().to(routes::run::travel_file_upload)))
             .route("/travel/submit/run", web::post().to(routes::run::travel_submit_run))
+            .route("/travel/submit/list", web::get().to(routes::run::travel_list))
             .route("/user/create", web::post().to(routes::user::user_create))
             .route("/user/login", web::post().to(routes::user::user_login))
             /*.service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![

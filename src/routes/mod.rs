@@ -10,8 +10,10 @@ use derive_more::{Display, Error};
 use utoipa::{ToSchema, OpenApi};
 use serde::{Serialize, Deserialize};
 
+/// Standard Response to signal if a request was successfull or not
 #[derive(Deserialize, Serialize, ToSchema)]
-pub struct Response {
+pub struct Response {    
+    #[schema(example = true)]
     success: bool
 }
 
@@ -42,17 +44,23 @@ impl error::ResponseError for ServerError {
 
 #[derive(OpenApi)]
 #[openapi(
-    paths(run::travel_submit_run), 
-    paths(run::travel_file_upload), 
-    paths(user::user_login),
-    paths(user::user_create), 
-    components(schemas(Response)),
-    components(schemas(user::UserCreation)),
-    components(schemas(user::UserLogin)),
-    components(schemas(run::SubmitFile)),
-    components(schemas(run::SubmitTravel)),
-    )
-]
+    paths(
+        run::travel_submit_run,
+        run::travel_file_upload,
+        run::travel_list,
+        user::user_login,
+        user::user_create
+    ), 
+    components(
+        schemas(
+            Response,
+            user::UserCreation,
+            user::UserLogin,
+            run::SubmitFile,
+            run::SubmitTravel
+        )
+    ),
+)]
 pub struct ApiDoc;
 
 
