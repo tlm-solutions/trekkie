@@ -43,3 +43,5 @@ with requests.Session() as s:
     submit_run = s.post('https://trekkie.staging.dvb.solutions/travel/submit/run', json = times_json)
     print(submit_run)
 
+    list_run = s.get('https://trekkie.staging.dvb.solutions/travel/submit/list')
+    print(list_run)
