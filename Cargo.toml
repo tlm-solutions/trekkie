@@ -4,13 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dump-dvb = { version = "0.5", git = "https://github.com/dump-dvb/dump-dvb.rs" }
+tlms = { version = "0.7", git = "https://github.com/tlm-solutions/tlms.rs", features = ["schema", "measurements", "telegrams", "trekkie"]}
 
-#derive_builder = "*"
 clap = { version = "4.0", features = ["derive"] }
 
 # webserver shit
-#actix-rt = "2.7"
 actix = "0.13"
 actix-web = "4.0"
 actix-diesel = { git = "https://github.com/frol/actix-diesel", branch = "actix-0.13", features = ["actix-web"] }
@@ -36,10 +34,3 @@ rand = "*"
 
 futures = "0.3"
 utoipa = { version = "2", features = ["actix_extras"] }
-#utoipa-swagger-ui = { version = "2", features = ["actix-web"] }
-
-#utoipa-swagger-ui = { git = "https://gitea.tassilo-tanneberger.de/revol-xut/utoipa-swagger.git", version = "2.1",features = ["actix-web"] }
-#utoipa-swagger-ui = { path = "../utoipa/utoipa-swagger-ui", features = ["actix./-web"] }
-#utoipa = { git = "https://github.com/revol-xut/utoipa.git", features = ["actix_extras"] }
-
-

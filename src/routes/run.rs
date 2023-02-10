@@ -1,8 +1,8 @@
 use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
-use dump_dvb::measurements::FinishedMeasurementInterval;
-use dump_dvb::trekkie::{InsertTrekkieRun, TrekkieRun};
+use tlms::measurements::FinishedMeasurementInterval;
+use tlms::trekkie::{InsertTrekkieRun, TrekkieRun};
 
 use utoipa::ToSchema;
 use serde::{Serialize, Deserialize};
@@ -69,7 +69,7 @@ pub async fn travel_submit_run(
          }
     };
 
-    use dump_dvb::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
     for measurement in (*submission).vehicles.clone().into_iter() {
         match diesel::insert_into(trekkie_runs)
             .values(&InsertTrekkieRun {
@@ -173,8 +173,8 @@ pub async fn travel_list(
          }
     };
 
-    use dump_dvb::schema::trekkie_runs::owner;
-    use dump_dvb::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::owner;
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
 
     match trekkie_runs
         .filter(owner.eq(Uuid::parse_str(&user.id().unwrap()).unwrap()))

@@ -1,7 +1,7 @@
 use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
-use dump_dvb::management::{user::{Role, User, hash_password, verify_password}};
+use tlms::management::{user::{Role, User, hash_password, verify_password}};
 
 use log::{error, info};
 use uuid::Uuid;
@@ -72,7 +72,7 @@ pub async fn user_create(
         }
     };
 
-    use dump_dvb::schema::users::dsl::users;
+    use tlms::schema::users::dsl::users;
     match diesel::insert_into(users)
         .values(&User {
         id: user_id,
@@ -131,8 +131,8 @@ pub async fn user_login(
 
     info!("user with id {} has logged in", &body.user_id);
 
-    use dump_dvb::schema::users::dsl::users;
-    use dump_dvb::schema::users::id;
+    use tlms::schema::users::dsl::users;
+    use tlms::schema::users::id;
     let user = match users 
         .filter(id.eq(body.user_id))
         .first::<User>(&mut database_connection) {
