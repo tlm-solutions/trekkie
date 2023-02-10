@@ -29,6 +29,9 @@
             trekkie = package;
             default = package;
           };
+          devShells.default = pkgs.mkShell {
+            nativeBuildInputs = (with packages.default; nativeBuildInputs ++ buildInputs);
+          };
         }
       ) // {
       overlays.default = final: prev: {
