@@ -2,19 +2,20 @@ pub mod run;
 pub mod user;
 
 use actix_web::{
-    error, HttpResponse,
+    error,
     http::{header::ContentType, StatusCode},
+    HttpResponse,
 };
 
 use derive_more::{Display, Error};
-use utoipa::{ToSchema, OpenApi};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use utoipa::{OpenApi, ToSchema};
 
 /// Standard Response to signal if a request was successfull or not
 #[derive(Deserialize, Serialize, ToSchema)]
-pub struct Response {    
+pub struct Response {
     #[schema(example = true)]
-    success: bool
+    success: bool,
 }
 
 #[derive(Debug, Display, Error)]
@@ -41,7 +42,6 @@ impl error::ResponseError for ServerError {
     }
 }
 
-
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -50,17 +50,13 @@ impl error::ResponseError for ServerError {
         run::travel_list,
         user::user_login,
         user::user_create
-    ), 
-    components(
-        schemas(
-            Response,
-            user::UserCreation,
-            user::UserLogin,
-            run::SubmitFile,
-            run::SubmitTravel
-        )
     ),
+    components(schemas(
+        Response,
+        user::UserCreation,
+        user::UserLogin,
+        run::SubmitFile,
+        run::SubmitTravel
+    ))
 )]
 pub struct ApiDoc;
-
-
