@@ -17,6 +17,7 @@ use actix_session::storage::RedisActorSessionStore;
 use actix_session::SessionMiddleware;
 
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use std::env;
 use std::fs;
@@ -57,13 +58,14 @@ pub fn get_redis_uri() -> String {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init();
     let args = Args::parse();
 
     if args.swagger {
         println!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
         return Ok(());
     }
+
+    env_logger::init();
 
     info!("Starting Data Collection Server ... ");
     let host = args.api_host.as_str();
@@ -72,6 +74,7 @@ async fn main() -> std::io::Result<()> {
 
     let connection_pool = web::Data::new(create_db_pool());
     let secret_key = Key::generate();
+
     HttpServer::new(move || {
         App::new()
             .wrap(IdentityMiddleware::default())
@@ -94,12 +97,10 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/user/create", web::post().to(routes::user::user_create))
             .route("/user/login", web::post().to(routes::user::user_login))
-        /*.service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
-            (
-                Url::new("api", "/api-doc/openapi.json"),
-                routes::ApiDoc::openapi(),
-            ),
-        ])) */
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-doc/openapi.json", routes::ApiDoc::openapi()),
+            )
     })
     .bind((host, port))?
     .run()
