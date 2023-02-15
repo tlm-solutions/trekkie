@@ -40,7 +40,28 @@
       "inputs": {
         "naersk": "naersk",
         "nixpkgs": "nixpkgs",
+        "tlms-rs": "tlms-rs",
         "utils": "utils"
+      }
+    },
+    "tlms-rs": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1675891590,
+        "narHash": "sha256-68b+CrLyhYhOltprZsXEkCACH58RRiW1Bk4eZqEZHFA=",
+        "owner": "tlm-solutions",
+        "repo": "tlms.rs",
+        "rev": "9a9d288131302bef137141de23d871a6f18ec8b7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tlm-solutions",
+        "repo": "tlms.rs",
+        "type": "github"
       }
     },
     "utils": {
