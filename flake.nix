@@ -38,6 +38,12 @@
         inherit (self.packages.${prev.system})
           trekkie;
       };
+
+      nixosModules = rec {
+        default = trekkie;
+        trekkie = import ./nixos-module;
+      };
+
       hydraJobs =
         let
           hydraSystems = [
