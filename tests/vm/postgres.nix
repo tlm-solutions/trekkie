@@ -12,6 +12,7 @@
         name = "dvbdump";
         ensurePermissions = {
           "DATABASE dvbdump" = "ALL PRIVILEGES";
+          "ALL TABLES IN SCHEMA public" = "ALL PRIVILEGES";
         };
       }
     ];
