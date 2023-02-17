@@ -6,13 +6,10 @@
     ensureDatabases = [ "dvbdump" ];
     ensureUsers = [
       {
-        name = "grafana";
-      }
-      {
         name = "dvbdump";
         ensurePermissions = {
           "DATABASE dvbdump" = "ALL PRIVILEGES";
-          "ALL TABLES IN SCHEMA public" = "ALL PRIVILEGES";
+          "ALL TABLES IN SCHEMA public" = "ALL";
         };
       }
     ];
@@ -32,6 +29,11 @@
 
       export DATABASE_URL=postgres:///dvbdump
       ${inputs.tlms-rs.packages.x86_64-linux.run-migration}/bin/run-migration
+
+      # fix the permissions for dvbdump user on migration-created tables
+      $PSQL -c "GRANT ALL ON DATABASE dvbdump TO dvbdump;"
+      $PSQL -d dvbdump -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO dvbdump;"
+      $PSQL -d dvbdump -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO dvbdump;"
       unset DATABASE_URL
     '';
   };
