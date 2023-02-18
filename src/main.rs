@@ -31,9 +31,11 @@ pub fn create_db_pool() -> DbPool {
 
     let password_path = env::var("POSTGRES_PASSWORD_PATH").unwrap_or(default_postgres_pw_path);
     let password = fs::read_to_string(password_path).expect("cannot read password file!");
+    let postgres_user = env::var("POSTGRES_USER").unwrap_or("dvbdump".to_string());
 
     let database_url = format!(
-        "postgres://dvbdump:{}@{}:{}/dvbdump",
+        "postgres://{}:{}@{}:{}/dvbdump",
+        postgres_user,
         password,
         env::var("POSTGRES_HOST").unwrap_or(default_postgres_host),
         env::var("POSTGRES_PORT").unwrap_or(default_postgres_port)

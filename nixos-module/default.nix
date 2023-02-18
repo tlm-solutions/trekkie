@@ -45,6 +45,13 @@ in
           Database port
         '';
       };
+      user = mkOption {
+        type = types.str;
+        default = "dvbdump";
+        description = ''
+          Database User to connect as
+        '';
+      };
       passwordFile = mkOption {
         type = types.either types.path types.string;
         default = "";
@@ -130,6 +137,7 @@ in
             "RUST_BACKTRACE" = if (cfg.logLevel == "info") then "0" else "1";
             "POSTGRES_HOST" = "${cfg.database.host}";
             "POSTGRES_PORT" = "${toString cfg.database.port}";
+            "POSTGRES_USER" = "${cfg.database.user}";
             "SALT_PATH" = "${cfg.saltPath}";
             "REDIS_PORT" = "${toString cfg.redis.port}";
             "REDIS_HOST" = "${cfg.redis.host}";
