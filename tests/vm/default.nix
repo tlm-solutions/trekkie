@@ -22,7 +22,27 @@
   virtualisation = {
     diskSize = 512;
     memorySize = 512;
+    graphics = false;
   };
+
+  services.getty = {
+    autologinUser = "root";
+  };
+  users.motd = ''
+  Trekkie-McTest: enterprise-grade, free-range, grass-fed testing vm
+  Now with 100% less graphics!
+
+  Services exposed to the host:
+  trekkie: 8060
+  SSH: 2222
+  postgres: 8888
+  redis: 8061
+
+  root password is "lol"
+
+  have fun!
+  '';
+
 
   networking.firewall.enable = false;
 
