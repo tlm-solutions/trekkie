@@ -38,6 +38,8 @@
             test-vm = test-vm-pkg;
             test-vm-wrapper = pkgs.writeScript "trekkie-test-vm-wrapper"
             ''
+              set -e
+
               echo Trekkie-McTest: enterprise-grade, free-range, grass fed testing vm
               echo
               echo "ALL RELEVANT SERVICES WILL BE EXPOSED TO THE HOST:"
@@ -48,8 +50,8 @@
               echo -e "redis:\t\t8061"
               echo
 
+              set -x
               export QEMU_NET_OPTS="hostfwd=tcp::2222-:22,hostfwd=tcp::8888-:5432,hostfwd=tcp::8060-:8060,hostfwd=tcp::8061-:6379"
-              echo "export QEMU_NET_OPTS=$QEMU_NET_OPTS"
 
               echo "running the vm now..."
               ${self.packages.${system}.test-vm}/bin/run-nixos-vm
