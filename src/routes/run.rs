@@ -85,6 +85,7 @@ pub async fn travel_submit_run(
             .execute(&mut database_connection)
         {
             error!("while trying to insert trekkie run {:?}", e);
+            return Err(ServerError::InternalError);
         };
     }
 
