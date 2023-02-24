@@ -17,7 +17,9 @@ use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
-/// Submit this Struct to Declare the Run take the returned id to submit the GPX Data
+/// This model is needed after submitting a file the id references the id in the [`SubmitFile`] model.
+/// The vehicles are measurements intervals recording start / end and which vehicle in the city was
+/// taken
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravel {
     #[schema(example = "
@@ -32,14 +34,15 @@ pub struct SubmitTravel {
     pub run: FinishedMeasurementInterval,
 }
 
-/// This struct just holds the ID of the previous submitted Run Information
+/// This model is returned after uploading a file. It returns the travel id, which is used for
+/// submitting the measurement intervals with the [`SubmitTravel`] model
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitRun {
     pub trekkie_run: Uuid,
 }
 
-/// Call this endpoint to submit an measurement intervall this will return the id for the run to
-/// submit the gps data
+/// This endpoint accepts measurement intervals that belong to the previously submitted gpx
+/// file.
 #[utoipa::path(
     post,
     path = "/travel/submit/run",
@@ -90,12 +93,12 @@ pub async fn travel_submit_run(
     Ok(web::Json(Response { success: true }))
 }
 
-/// Takes the gpx file and the run id saves it
+/// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
     post,
     path = "/travel/submit/gpx",
     responses(
-        (status = 200, description = "gpx file was successfully submitted"),
+        (status = 200, description = "gpx file was successfully submitted", body = SubmitFile),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -187,12 +190,12 @@ pub async fn travel_file_upload(
     }
 }
 
-/// Takes the gpx file saves it and returnes the travel id
+/// Takes the gpx file saves it and returns the travel id
 #[utoipa::path(
     get,
     path = "/travel/submit/list",
     responses(
-        (status = 200, description = "returnes old measurements", body = Vec<TrekkieRun>),
+        (status = 200, description = "returns old measurements", body = Vec<TrekkieRun>),
         (status = 500, description = "postgres pool error")
     ),
 )]

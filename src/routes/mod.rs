@@ -20,10 +20,10 @@ pub struct Response {
 
 #[derive(Debug, Display, Error)]
 pub enum ServerError {
-    #[display(fmt = "internal error")]
+    #[display(fmt = "Internal Error")]
     InternalError,
 
-    #[display(fmt = "bad request")]
+    #[display(fmt = "Bad Request")]
     BadClientData,
 }
 

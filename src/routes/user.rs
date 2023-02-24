@@ -13,30 +13,22 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-/// Returnes information about new trekkie user which should be saved persistently
+/// Response body if user creation is successful. User ID and password are returned.
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserCreation {
-    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000").unwrap())]
     pub user_id: Uuid,
-
-    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000").unwrap())]
     pub password: String,
 }
 
-/// This struct is used for authentication if the request is successfull a session cookie is
-/// returned
+/// Request body for authentication
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct UserLogin {
-    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000"))]
     pub user_id: Uuid,
-
-    //#[schema(example = Uuid::parse_str("00000000-00000000-00000000-00000000"))]
     pub password: String,
 }
 
-/// This endpoint if creating minimal and unpriviledged trekkie users
-/// if the call was succesfull user information and a session cookie are
-/// returned
+/// Request to this endpoint creates minimal and unpriviledged trekkie user. If the call was succesful
+/// user information and a session cookie are returned
 #[utoipa::path(
     post,
     path = "/user/create",
@@ -89,24 +81,20 @@ pub async fn user_create(
     };
     info!("creating new user with id {}", user_id);
 
-    match Identity::login(&req.extensions(), user_id.to_string()) {
-        Ok(_) => {}
-        Err(e) => {
-            error!(
-                "cannot create session maybe the redis is not running. {:?}",
-                e
-            );
-            return Err(ServerError::BadClientData);
-        }
+    if let Err(e) = Identity::login(&req.extensions(), user_id.to_string()) {
+        error!("Cannot create session! {e:?}");
+        error!("Is redis running?");
+        return Err(ServerError::BadClientData);
     };
 
     Ok(web::Json(UserCreation { user_id, password }))
 }
 
-/// Sends user credentials to the server if they are correct a session cookie is set.
+/// Sends user credentials to the server. If they are correct a session cookie is set.
 #[utoipa::path(
     post,
     path = "/user/login",
+    request_body = UserLogin,
     responses(
         (status = 200, description = "trekkie user was successfully logged in", body = crate::routes::Response),
         (status = 500, description = "postgres pool error")

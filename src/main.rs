@@ -10,7 +10,7 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
 
-use actix_web::{cookie::Key, web, App, HttpServer, middleware::Logger};
+use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
 
 use actix_identity::IdentityMiddleware;
 use actix_session::storage::RedisActorSessionStore;
@@ -62,7 +62,12 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     if args.swagger {
-        println!("{}", routes::ApiDoc::openapi().to_pretty_json().expect("could not format openapi spec!"));
+        println!(
+            "{}",
+            routes::ApiDoc::openapi()
+                .to_pretty_json()
+                .expect("could not format openapi spec!")
+        );
         return Ok(());
     }
 
