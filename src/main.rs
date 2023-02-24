@@ -27,11 +27,10 @@ type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 pub fn create_db_pool() -> DbPool {
     let default_postgres_host = String::from("localhost:5433");
     let default_postgres_port = String::from("5432");
-    let default_postgres_pw_path = String::from("/run/secrets/postgres_password");
 
-    let password_path = env::var("POSTGRES_PASSWORD_PATH").unwrap_or(default_postgres_pw_path);
+    let password_path = env::var("POSTGRES_PASSWORD_PATH").expect("DB password was not specified");
     let password = fs::read_to_string(password_path).expect("cannot read password file!");
-    let postgres_user = env::var("POSTGRES_USER").unwrap_or("dvbdump".to_string());
+    let postgres_user = env::var("POSTGRES_USER").expect("no database user configured");
 
     let database_url = format!(
         "postgres://{}:{}@{}:{}/dvbdump",
@@ -63,7 +62,7 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
 
     if args.swagger {
-        println!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
+        println!("{}", routes::ApiDoc::openapi().to_pretty_json().expect("could not format openapi spec!"));
         return Ok(());
     }
 
