@@ -10,7 +10,7 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
 
-use actix_web::{cookie::Key, web, App, HttpServer};
+use actix_web::{cookie::Key, web, App, HttpServer, middleware::Logger};
 
 use actix_identity::IdentityMiddleware;
 use actix_session::storage::RedisActorSessionStore;
@@ -72,7 +72,7 @@ async fn main() -> std::io::Result<()> {
     info!("Starting Data Collection Server ... ");
     let host = args.api_host.as_str();
     let port = args.port;
-    debug!("Listening on: {}:{}", host, port);
+    info!("Listening on: {}:{}", host, port);
 
     let connection_pool = web::Data::new(create_db_pool());
     let secret_key = Key::generate();
@@ -84,6 +84,7 @@ async fn main() -> std::io::Result<()> {
                 RedisActorSessionStore::new(get_redis_uri()),
                 secret_key.clone(),
             ))
+            .wrap(Logger::default())
             .app_data(connection_pool.clone())
             .service(
                 web::resource("/travel/submit/gpx")
