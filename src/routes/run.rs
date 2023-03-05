@@ -17,9 +17,7 @@ use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
-/// This model is needed after submitting a file the id references the id in the SubmitFile model.
-/// The vehicles are measurements intervals recording start / end and which vehicle in the city was
-/// taken
+/// Submit this Struct to Declare the Run take the returned id to submit the GPX Data
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravel {
     #[schema(example = "
@@ -34,20 +32,19 @@ pub struct SubmitTravel {
     pub run: FinishedMeasurementInterval,
 }
 
-/// This model is returned after uploading a file it returnes the travel id which is used for
-/// submitting the measurements intervals with the SubmitTravel model
+/// This struct just holds the ID of the previous submitted Run Information
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitRun {
     pub trekkie_run: Uuid,
 }
 
-/// This endpoints if submitting measurement intervals that belong to the previous submitted gpx
-/// file.
+/// Call this endpoint to submit an measurement intervall this will return the id for the run to
+/// submit the gps data
 #[utoipa::path(
     post,
     path = "/travel/submit/run",
     responses(
-        (status = 200, description = "travel was successfully submitted", body = crate::routes::Response),
+        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -91,7 +88,7 @@ pub async fn travel_submit_run(
     }
 }
 
-/// Takes the gpx file saves it and returnes the travel id
+/// Takes the gpx file and the run id saves it
 #[utoipa::path(
     post,
     path = "/travel/submit/gpx",
