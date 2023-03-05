@@ -1,30 +1,25 @@
-use crate::routes::{Response, ServerError};
+use crate::routes::ServerError;
 use crate::DbPool;
 
+use tlms::locations::gps::InsertGpsPoint;
 use tlms::measurements::FinishedMeasurementInterval;
-use tlms::trekkie::{InsertTrekkieRun, TrekkieRun};
+use tlms::trekkie::TrekkieRun;
 
 use futures::{StreamExt, TryStreamExt};
+use gpx;
 use log::error;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use std::fs::File;
-use std::io::Write;
-
 use actix_identity::Identity;
 use actix_multipart::Multipart;
-use actix_web::{web, HttpRequest};
+use actix_web::{web, HttpRequest, HttpResponse};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
-/// This model is needed after submitting a file the id references the id in the SubmitFile model.
-/// The vehicles are measurements intervals recording start / end and which vehicle in the city was
-/// taken
+/// Submit this Struct to Declare the Run take the returned id to submit the GPX Data
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravel {
-    pub gpx_id: Uuid,
-
     #[schema(example = "
     [ {
         start: Utc::now().naive_utc(),
@@ -33,32 +28,32 @@ pub struct SubmitTravel {
         run: 42,
         region: 0
     } ]")]
-    pub vehicles: Vec<FinishedMeasurementInterval>,
+    #[serde(flatten)]
+    pub run: FinishedMeasurementInterval,
 }
 
-/// This model is returned after uploading a file it returnes the travel id which is used for
-/// submitting the measurements intervals with the SubmitTravel model
+/// This struct just holds the ID of the previous submitted Run Information
 #[derive(Serialize, Deserialize, ToSchema)]
-pub struct SubmitFile {
-    pub gpx_id: Uuid,
+pub struct SubmitRun {
+    pub trekkie_run: Uuid,
 }
 
-/// This endpoints if submitting measurement intervals that belong to the previous submitted gpx
-/// file.
+/// Call this endpoint to submit an measurement intervall this will return the id for the run to
+/// submit the gps data
 #[utoipa::path(
     post,
     path = "/travel/submit/run",
     responses(
-        (status = 200, description = "travel was successfully submitted", body = crate::routes::Response),
+        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
 pub async fn travel_submit_run(
     pool: web::Data<DbPool>,
     user: Identity,
-    submission: web::Json<SubmitTravel>,
+    measurement: web::Json<SubmitTravel>,
     _req: HttpRequest,
-) -> Result<web::Json<Response>, ServerError> {
+) -> Result<web::Json<SubmitRun>, ServerError> {
     // getting the database connection from pool
     let mut database_connection = match pool.get() {
         Ok(conn) => conn,
@@ -69,81 +64,125 @@ pub async fn travel_submit_run(
     };
 
     use tlms::schema::trekkie_runs::dsl::trekkie_runs;
-    for measurement in submission.vehicles.clone().into_iter() {
-        if let Err(e) = diesel::insert_into(trekkie_runs)
-            .values(&InsertTrekkieRun {
-                id: None,
-                start_time: measurement.start,
-                end_time: measurement.stop,
-                line: measurement.line,
-                run: measurement.run,
-                gps_file: submission.gpx_id.to_string(),
-                region: measurement.region,
-                owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
-                finished: true,
-            })
-            .execute(&mut database_connection)
-        {
+    let run_id = Uuid::new_v4();
+    match diesel::insert_into(trekkie_runs)
+        .values(&TrekkieRun {
+            id: run_id,
+            start_time: measurement.run.start,
+            end_time: measurement.run.stop,
+            line: measurement.run.line,
+            run: measurement.run.run,
+            region: measurement.run.region,
+            owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
+            finished: true,
+        })
+        .execute(&mut database_connection)
+    {
+        Ok(_result) => Ok(web::Json(SubmitRun {
+            trekkie_run: run_id,
+        })),
+        Err(e) => {
             error!("while trying to insert trekkie run {:?}", e);
-            return Err(ServerError::InternalError);
-        };
+            Err(ServerError::InternalError)
+        }
     }
-
-    Ok(web::Json(Response { success: false }))
 }
 
-/// Takes the gpx file saves it and returnes the travel id
+/// Takes the gpx file and the run id saves it
 #[utoipa::path(
     post,
     path = "/travel/submit/gpx",
     responses(
-        (status = 200, description = "gpx file was successfully submitted", body = crate::routes::SubmitFile),
+        (status = 200, description = "gpx file was successfully submitted"),
         (status = 500, description = "postgres pool error")
     ),
 )]
 pub async fn travel_file_upload(
-    // pool: web::Data<DbPool>,
+    pool: web::Data<DbPool>,
     _user: Identity,
+    run: web::Json<SubmitRun>,
     mut payload: Multipart,
     _req: HttpRequest,
-) -> Result<web::Json<SubmitFile>, ServerError> {
-    let default_gpx_path = "/var/lib/trekkie/gpx/".to_string();
-    let gpx_path = std::env::var("GPX_PATH").unwrap_or(default_gpx_path);
-    let run_uuid = Uuid::new_v4();
-    let filepath = format!("{}{}.gpx", gpx_path, &run_uuid);
+) -> Result<HttpResponse, ServerError> {
+    // getting the database connection from pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    // collection of gps points
+    let mut point_list = Vec::new();
 
     // iterate over multipart stream
     while let Ok(Some(mut field)) = payload.try_next().await {
         let _content_type = field.content_disposition();
-        let filepath_clone = filepath.clone();
+        let mut buffer: String = String::new();
 
-        // File::create is blocking operation, use threadpool
-        let mut f: File = match web::block(|| std::fs::File::create(filepath_clone)).await {
-            Ok(wrapped_file) => match wrapped_file {
-                Ok(file) => file,
-                Err(e) => {
-                    error!("cannot create uploaded file because of file error {:?}", e);
-                    return Err(ServerError::InternalError);
-                }
-            },
-            Err(e) => {
-                error!("cannot create uploaded file because of blockerror {:?}", e);
-                return Err(ServerError::InternalError);
-            }
-        };
-
-        // Field in turn is stream of *Bytes* object
+        // Merging all the multipart elements into one string
         while let Some(chunk) = field.next().await {
             let data = chunk.unwrap();
-            // filesystem operations are blocking, we have to use threadpool
-            f = web::block(move || f.write_all(&data).map(|_| f))
-                .await
-                .unwrap()
-                .unwrap();
+            let data_string = data.escape_ascii().to_string();
+
+            buffer += &data_string;
+        }
+
+        // Deserializing the string into a gpx object
+        match gpx::read(buffer.as_bytes()) {
+            Ok(gpx) => {
+                // I feel like my IQ dropping around here, but dunno how to do it, especially given time
+                // situation in gpx crate
+                for track in gpx.tracks {
+                    for segment in track.segments {
+                        for point in segment.points {
+                            let soul = InsertGpsPoint {
+                                id: None,
+                                trekkie_run: run.trekkie_run,
+                                lat: point.point().y(), // according to gpx crate team x and y are less
+                                lon: point.point().x(), // ambiguous for coordinates on a map
+                                elevation: point.elevation,
+                                timestamp: match point.time {
+                                    Some(time) => chrono::naive::NaiveDateTime::parse_from_str(
+                                        &time.format().unwrap(),
+                                        "%Y-%m-%dT%H:%M:%SZ",
+                                    )
+                                    .unwrap(),
+                                    None => break,
+                                },
+
+                                accuracy: point.pdop,
+                                vertical_accuracy: point.vdop,
+                                bearing: None,
+                                speed: point.speed,
+                            };
+
+                            point_list.push(soul);
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                error!("cannot convert multipart string into gpx {:?}", e);
+                return Err(ServerError::BadClientData);
+            }
         }
     }
 
-    Ok(web::Json(SubmitFile { gpx_id: run_uuid }))
+    use tlms::schema::gps_points::dsl::gps_points;
+
+    // taking all the points and inserting them into the database
+    match diesel::insert_into(gps_points)
+        .values(&point_list)
+        .execute(&mut database_connection)
+    {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => {
+            error!("while trying to insert trekkie run {:?}", e);
+            Err(ServerError::InternalError)
+        }
+    }
 }
 
 /// Takes the gpx file saves it and returnes the travel id

@@ -51,12 +51,6 @@ impl error::ResponseError for ServerError {
         user::user_login,
         user::user_create
     ),
-    components(schemas(
-        Response,
-        user::UserCreation,
-        user::UserLogin,
-        run::SubmitFile,
-        run::SubmitTravel
-    ))
+    components(schemas(Response, user::UserCreation, user::UserLogin, run::SubmitTravel))
 )]
 pub struct ApiDoc;

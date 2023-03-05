@@ -78,7 +78,7 @@ pub async fn user_create(
             name: None,
             email: None,
             password: hashed_password,
-            role: Role::Trekkie.as_int(),
+            role: Role::Trekkie as i32,
             deactivated: false,
             email_setting: None,
         })

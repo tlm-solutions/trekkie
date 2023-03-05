@@ -12,14 +12,16 @@ This service takes your GPS tracks and times and regenerates the position mappin
 graph TD
     A[Start] -->|/user/login| B(Authenticated)
     A[Start] -->|/user/create| B(Authenticated)
-    B -->|/travel/submit/gpx| C(Travel created & GPX Uploaded)
-    C -->|/travel/submit/run| D(Upload Measurement Intervals)
+    B -->|/travel/submit/run| C(Upload Measurement Intervals)
+    C -->|/travel/submit/gpx| D(Travel created & GPX Uploaded)
     D --> E(Done)
 ```
 
-The `POST /user/create` endpoint will create a simple user and return the `user_id` and `password` which should be saved persistently, because they are required to authenticate against the `/user/login` endpoint.
+The `POST /user/create` endpoint will create a simple user and return the `user_id` and `password` which should be saved persistently, 
+because they are required to authenticate against the `/user/login` endpoint.
 
-Uploading a track is a two stage process the first is submitting the GPX file to `/travel/submit/gpx`. The second part is uploading the measurement intervals with the `/travel/submit/run` endpoint this endpoint requires the user to specify the corresponding gpx file.
+Uploading a track is a two stage process the first is submitting the Run Information to `/travel/submit/run`. The second part is uploading the 
+GPX File with the `/travel/submit/gpx` endpoint this endpoint requires the user to specify the corresponding run id.
 
 ### API Endpoints
 
