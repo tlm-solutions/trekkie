@@ -5,3 +5,4 @@ cookie
 .direnv
 .envrc
 nixos.qcow2
+.pyc

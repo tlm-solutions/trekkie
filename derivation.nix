@@ -1,4 +1,4 @@
-{ naersk, gnumake, src, lib, pkg-config, cmake, protobuf, postgresql, zlib }:
+{ naersk, gnumake, src, lib, pkg-config, cmake, protobuf, postgresql, zlib, openssl}:
 
 naersk.buildPackage {
   pname = "trekkie";
@@ -9,7 +9,7 @@ naersk.buildPackage {
   cargoSha256 = lib.fakeSha256;
 
   nativeBuildInputs = [ pkg-config cmake gnumake ];
-  buildInputs = [ protobuf zlib postgresql ];
+  buildInputs = [ protobuf zlib postgresql openssl ];
 
   meta = {
     description = "Simple rust server which collects gps tracks and measurement intervals";

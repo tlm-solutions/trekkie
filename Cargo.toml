@@ -31,6 +31,11 @@ uuid = { version = "*", features = ["serde", "v4"] }
 env_logger = "*"
 log = "*"
 rand = "*"
-
 futures = "0.3"
+
+# fancy web features
 utoipa = { version = "2", features = ["actix_extras"] }
+
+# hell
+gpx = { version = "*"}
+
