@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 tlms = { version = "0.7", git = "https://github.com/tlm-solutions/tlms.rs", features = ["schema", "measurements", "telegrams", "trekkie", "management"]}
-lofi = { version = "0.1", git = "https://github.com/tlm-solutions/lofi", features = [ "correlate" ] }
+lofi = { version = "0.3", git = "https://github.com/tlm-solutions/lofi", tag = "v0.3.0", features = [ "correlate" ] }
 
 clap = { version = "4.1", features = ["derive"] }
 
@@ -14,7 +14,7 @@ actix = "0.13"
 actix-web = "4.0"
 actix-diesel = { git = "https://github.com/frol/actix-diesel", branch = "actix-0.13", features = ["actix-web"] }
 actix-identity = "*"
-actix-session= { version = "0.7", features = ["redis-actor-session"] }
+actix-session = { version = "0.7", features = ["redis-actor-session"] }
 actix-multipart = "*"
 derive_more = "0"
 
