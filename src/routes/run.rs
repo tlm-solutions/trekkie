@@ -12,16 +12,16 @@ use tlms::trekkie::TrekkieRun;
 
 use lofi::correlate::correlate;
 
-use futures::{StreamExt, TryStreamExt};
-use gpx;
-use log::{error, warn, info};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use uuid::Uuid;
 use actix_identity::Identity;
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use futures::{StreamExt, TryStreamExt};
+use gpx;
+use log::{error, info, warn};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 /// This model is needed after submitting a file the id references the id in the [`SubmitFile`] model.
 /// The vehicles are measurements intervals recording start / end and which vehicle in the city was
@@ -185,28 +185,29 @@ pub async fn correlate_run(
 
     // get region data cache
     let cache_dir = env::var("TREKKIE_CACHE_DIR").unwrap_or("/tmp/trekkie".to_string());
-    let datacare_api = env::var("TREKKIE_DATACARE_API").unwrap_or("https://datacare.dvb.solutions".to_string());
+    let datacare_api =
+        env::var("TREKKIE_DATACARE_API").unwrap_or("https://datacare.dvb.solutions".to_string());
     let corr_window: i64 = match env::var("TREKKIE_CORRELATE_WINDOW") {
         Ok(w) => match w.parse() {
             Ok(uwu) => uwu,
             Err(e) => {
-            warn!("While trying to parse $TREKKIE_CORRELATE_WINDOW: {e}");
-            info!("setting correlation window to default value: 5");
-            5
-            },
+                warn!("While trying to parse $TREKKIE_CORRELATE_WINDOW: {e}");
+                info!("setting correlation window to default value: 5");
+                5
+            }
         },
         Err(e) => {
             warn!("While trying to get $TREKKIE_CORRELATE_WINDOW: {e}");
             info!("setting correlation window to default value: 5");
             5
-        },
+        }
     };
     let reg_cache = match LocationsJson::update_region_cache(&datacare_api, cache_dir.into()) {
         Ok(cache) => cache,
         Err(e) => {
             error!("while trying to get region cache: {e:?}");
             return Err(ServerError::InternalError);
-        },
+        }
     };
 
     // corrrelate
@@ -217,7 +218,7 @@ pub async fn correlate_run(
     // TODO: still need to figure out how to store it
     if corr_request.get_result {
         return Ok(web::Json(CorrelateResponse {
-            new_report_points: -1, 
+            new_report_points: -1,
             updated_report_points: -1,
             stops_file: Some(stops),
         }));
