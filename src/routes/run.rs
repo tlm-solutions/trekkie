@@ -67,7 +67,7 @@ pub struct CorrelateResponse {
 /// can be correlated, for admin - any run for any user
 #[utoipa::path(
     post,
-    path = "/correlate/run",
+    path = "/run/correlate",
     responses(
         (status = 200, description = "Correlation Successful", body = CorrelateResponse),
         (status = 401, description = "Unauthorized"),
