@@ -104,6 +104,7 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/user/create", web::post().to(routes::user::user_create))
             .route("/user/login", web::post().to(routes::user::user_login))
+            .route("/correlate/run", web::post().to(routes::run::correlate_run))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", routes::ApiDoc::openapi()),
