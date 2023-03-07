@@ -217,17 +217,17 @@ pub async fn correlate_run(
     // get old stops json
     // TODO: still need to figure out how to store it
     if corr_request.get_result {
-        return Ok(web::Json(CorrelateResponse {
+        Ok(web::Json(CorrelateResponse {
             new_report_points: -1,
             updated_report_points: -1,
             stops_file: Some(stops),
-        }));
+        }))
     } else {
-        return Ok(web::Json(CorrelateResponse {
+        Ok(web::Json(CorrelateResponse {
             new_report_points: -1,
             updated_report_points: -1,
             stops_file: None,
-        }));
+        }))
     }
 }
 
