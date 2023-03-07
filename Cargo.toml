@@ -4,16 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tlms = { version = "0.7", git = "https://github.com/tlm-solutions/tlms.rs", features = ["schema", "measurements", "telegrams", "trekkie"]}
+tlms = { version = "0.7", git = "https://github.com/tlm-solutions/tlms.rs", features = ["schema", "measurements", "telegrams", "trekkie", "management"]}
+lofi = { version = "0.3", git = "https://github.com/tlm-solutions/lofi", tag = "v0.3.0", features = [ "correlate" ] }
 
-clap = { version = "4.0", features = ["derive"] }
+clap = { version = "4.1", features = ["derive"] }
 
 # webserver shit
 actix = "0.13"
 actix-web = "4.0"
 actix-diesel = { git = "https://github.com/frol/actix-diesel", branch = "actix-0.13", features = ["actix-web"] }
 actix-identity = "*"
-actix-session= { version = "0.7", features = ["redis-actor-session"] }
+actix-session = { version = "0.7", features = ["redis-actor-session"] }
 actix-multipart = "*"
 derive_more = "0"
 
@@ -28,14 +29,12 @@ r2d2 = "*"
 # utils
 chrono = "0.4"
 uuid = { version = "*", features = ["serde", "v4"] }
-env_logger = "*"
+env_logger = "0.10"
 log = "*"
 rand = "*"
 futures = "0.3"
-
-# fancy web features
-utoipa = { version = "2", features = ["actix_extras"] }
-
 # hell
 gpx = { version = "0"}
 
+utoipa = { version = "3", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "3", features = ["actix-web"] }

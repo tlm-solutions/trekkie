@@ -5,7 +5,7 @@
     # port directly to the host vm.
     enable = true;
     host = "0.0.0.0";
-    saltPath = "${inputs.self}/tests/vm/test-pw";
+    saltPath = ./test-salt;
     port = 8060;
     database = {
       host = "127.0.0.1";

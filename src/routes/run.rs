@@ -1,23 +1,31 @@
 use crate::routes::ServerError;
 use crate::DbPool;
 
-use tlms::locations::gps::InsertGpsPoint;
+use std::env;
+
+use tlms::locations::gps::{GpsPoint, InsertGpsPoint};
+use tlms::locations::LocationsJson;
+use tlms::management::user::{Role, User};
 use tlms::measurements::FinishedMeasurementInterval;
+use tlms::telegrams::r09::R09SaveTelegram;
 use tlms::trekkie::TrekkieRun;
 
-use futures::{StreamExt, TryStreamExt};
-use gpx;
-use log::error;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-use uuid::Uuid;
+use lofi::correlate::correlate;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
 use actix_web::{web, HttpRequest, HttpResponse};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use futures::{StreamExt, TryStreamExt};
+use gpx;
+use log::{error, info, warn};
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
-/// Submit this Struct to Declare the Run take the returned id to submit the GPX Data
+/// This model is needed after submitting a file the id references the id in the [`SubmitFile`] model.
+/// The vehicles are measurements intervals recording start / end and which vehicle in the city was
+/// taken
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravel {
     #[schema(example = "
@@ -32,14 +40,203 @@ pub struct SubmitTravel {
     pub run: FinishedMeasurementInterval,
 }
 
-/// This struct just holds the ID of the previous submitted Run Information
+/// This model is returned after uploading a file. It returns the travel id, which is used for
+/// submitting the measurement intervals with the [`SubmitTravel`] model
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitRun {
     pub trekkie_run: Uuid,
 }
 
-/// Call this endpoint to submit an measurement intervall this will return the id for the run to
-/// submit the gps data
+/// Model to correlate runs for given user. If get_result is true, the stops.json also returned
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+pub struct CorrelatePlease {
+    pub run_id: Uuid,
+    pub get_result: bool,
+    pub get_stats: bool,
+}
+
+/// Response to explicit correlate request
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct CorrelateResponse {
+    pub new_report_points: i64,
+    pub updated_report_points: i64,
+    pub stops_file: Option<LocationsJson>,
+}
+
+/// This endpoint would correlate runs for given user id. For regular user only own runs
+/// can be correlated, for admin - any run for any user
+#[utoipa::path(
+    post,
+    path = "/run/correlate",
+    responses(
+        (status = 200, description = "Correlation Successful", body = CorrelateResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 500, description = "Interal Error"),
+        (status = 501, description = "Not Implemented"),
+    ),
+)]
+pub async fn correlate_run(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    _req: HttpRequest,
+    corr_request: web::Json<CorrelatePlease>,
+) -> Result<web::Json<CorrelateResponse>, ServerError> {
+    if corr_request.get_stats {
+        return Err(ServerError::NotImplemented);
+    }
+
+    // get connection from the pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    // Parse the user id
+    let uuid: Uuid = match user.id() {
+        Ok(id) => match Uuid::parse_str(&id) {
+            Ok(uid) => uid,
+            Err(e) => {
+                error!("While parsing user UUID: {e}");
+                return Err(ServerError::Unauthorized);
+            }
+        },
+        Err(e) => {
+            error!("While trying to read user id from request: {e}");
+            return Err(ServerError::Unauthorized);
+        }
+    };
+
+    // fetch the user
+    use tlms::schema::users::dsl::users;
+    use tlms::schema::users::id as user_id;
+
+    // Get the user and privileges
+    let req_user: User = match users
+        .filter(user_id.eq(uuid))
+        .first(&mut database_connection)
+    {
+        Ok(user) => user,
+        Err(e) => {
+            error!("While trying to query user info for {uuid}: {e}");
+            return Err(ServerError::Unauthorized);
+        }
+    };
+
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::id as run_id;
+    let run: TrekkieRun = match trekkie_runs
+        .filter(run_id.eq(corr_request.run_id))
+        .first(&mut database_connection)
+    {
+        Ok(r) => r,
+        Err(e) => {
+            error!("While trying to query for run {}: {e}", corr_request.run_id);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    if run.owner != req_user.id && req_user.role != Role::Administrator as i32 {
+        warn!(
+            "naughty boy: user {} tried to access run owned by {}!",
+            req_user.id, run.owner
+        );
+        return Err(ServerError::Forbidden);
+    }
+
+    use tlms::schema::gps_points::dsl::gps_points;
+    use tlms::schema::gps_points::trekkie_run;
+    let queried_gps: Vec<GpsPoint> = match gps_points
+        .filter(trekkie_run.eq(run.id))
+        .load(&mut database_connection)
+    {
+        Ok(points) => points,
+        Err(e) => {
+            error!(
+                "while fetching gps points for run id {id}: {e}",
+                id = run.id
+            );
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    let queried_gps: Vec<InsertGpsPoint> = queried_gps.into_iter().map(|p| p.into()).collect();
+
+    // query r09 telegrams matching the timeframe of the run
+    use tlms::schema::r09_telegrams::dsl::r09_telegrams;
+    use tlms::schema::r09_telegrams::line as tg_line;
+    use tlms::schema::r09_telegrams::run_number as tg_run;
+    use tlms::schema::r09_telegrams::time as telegram_time;
+    let telegrams: Vec<R09SaveTelegram> = match r09_telegrams
+        .filter(telegram_time.ge(run.start_time))
+        .filter(telegram_time.le(run.end_time))
+        .filter(tg_line.eq(run.line))
+        .filter(tg_run.eq(run.run))
+        .load(&mut database_connection)
+    {
+        Ok(t) => t,
+        Err(e) => {
+            error!(
+                "While trying to query the telegrams matching {run}: {e}",
+                run = run.id
+            );
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    // get region data cache
+    let cache_dir = env::var("TREKKIE_CACHE_DIR").unwrap_or("/tmp/trekkie".to_string());
+    let datacare_api =
+        env::var("TREKKIE_DATACARE_API").unwrap_or("https://datacare.dvb.solutions".to_string());
+    let corr_window: i64 = match env::var("TREKKIE_CORRELATE_WINDOW") {
+        Ok(w) => match w.parse() {
+            Ok(uwu) => uwu,
+            Err(e) => {
+                warn!("While trying to parse $TREKKIE_CORRELATE_WINDOW: {e}");
+                info!("setting correlation window to default value: 5");
+                5
+            }
+        },
+        Err(e) => {
+            warn!("While trying to get $TREKKIE_CORRELATE_WINDOW: {e}");
+            info!("setting correlation window to default value: 5");
+            5
+        }
+    };
+    let reg_cache = match LocationsJson::update_region_cache(&datacare_api, cache_dir.into()) {
+        Ok(cache) => cache,
+        Err(e) => {
+            error!("while trying to get region cache: {e:?}");
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    // corrrelate
+    let telegram_iter = Box::new(telegrams.into_iter());
+    let stops = correlate(telegram_iter, queried_gps.into(), corr_window, reg_cache);
+
+    // get old stops json
+    // TODO: still need to figure out how to store it
+    if corr_request.get_result {
+        Ok(web::Json(CorrelateResponse {
+            new_report_points: -1,
+            updated_report_points: -1,
+            stops_file: Some(stops),
+        }))
+    } else {
+        Ok(web::Json(CorrelateResponse {
+            new_report_points: -1,
+            updated_report_points: -1,
+            stops_file: None,
+        }))
+    }
+}
+
+/// This endpoint accepts measurement intervals that belong to the previously submitted gpx
+/// file.
 #[utoipa::path(
     post,
     path = "/travel/submit/run",
@@ -88,12 +285,12 @@ pub async fn travel_submit_run(
     }
 }
 
-/// Takes the gpx file and the run id saves it
+/// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
     post,
     path = "/travel/submit/gpx",
     responses(
-        (status = 200, description = "gpx file was successfully submitted"),
+        (status = 200, description = "gpx file was successfully submitted", body = SubmitFile),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -185,12 +382,12 @@ pub async fn travel_file_upload(
     }
 }
 
-/// Takes the gpx file saves it and returnes the travel id
+/// Takes the gpx file saves it and returns the travel id
 #[utoipa::path(
     get,
     path = "/travel/submit/list",
     responses(
-        (status = 200, description = "returnes old measurements", body = Vec<TrekkieRun>),
+        (status = 200, description = "returns old measurements", body = Vec<TrekkieRun>),
         (status = 500, description = "postgres pool error")
     ),
 )]

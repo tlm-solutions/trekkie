@@ -37,13 +37,24 @@ times_json = {
 with requests.Session() as s:
     create_user_response = s.post('{}/user/create'.format(baseurl))
     print(create_user_response)
+    print(create_user_response.json())
+    print(s.cookies.get_dict())
 
-    submit_gpx = s.post('{}/travel/submit/gpx'.format(baseurl), files = files)
+    # try to get session cookie explicitly
+    login_response = s.post('{}/user/login'.format(baseurl), json = create_user_response.json())
+    print(login_response)
+    print(login_response.json())
+    print(s.cookies.get_dict())
+
+    submit_gpx = s.post('{}/travel/submit/gpx'.format(baseurl), files = files, cookies=s.cookies.get_dict())
     print(submit_gpx)
+    print(submit_gpx.json())
 
     times_json["gpx_id"] = submit_gpx.json()["gpx_id"]
-    submit_run = s.post('{}/travel/submit/run'.format(baseurl), json = times_json)
+    submit_run = s.post('{}/travel/submit/run'.format(baseurl), json = times_json, cookies=s.cookies.get_dict())
     print(submit_run)
+    print(submit_run.json())
 
-    list_run = s.get('{}/travel/submit/list'.format(baseurl))
+    list_run = s.get('{}/travel/submit/list'.format(baseurl), cookies=s.cookies.get_dict())
     print(list_run)
+    print(list_run.json())

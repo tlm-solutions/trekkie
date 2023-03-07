@@ -10,13 +10,14 @@ use diesel::r2d2::ConnectionManager;
 use diesel::r2d2::Pool;
 use diesel::PgConnection;
 
-use actix_web::{cookie::Key, web, App, HttpServer};
+use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
 
 use actix_identity::IdentityMiddleware;
 use actix_session::storage::RedisActorSessionStore;
 use actix_session::SessionMiddleware;
 
 use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use std::env;
 use std::fs;
@@ -26,13 +27,14 @@ type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 pub fn create_db_pool() -> DbPool {
     let default_postgres_host = String::from("localhost:5433");
     let default_postgres_port = String::from("5432");
-    let default_postgres_pw_path = String::from("/run/secrets/postgres_password");
 
-    let password_path = env::var("POSTGRES_PASSWORD_PATH").unwrap_or(default_postgres_pw_path);
+    let password_path = env::var("POSTGRES_PASSWORD_PATH").expect("DB password was not specified");
     let password = fs::read_to_string(password_path).expect("cannot read password file!");
+    let postgres_user = env::var("POSTGRES_USER").expect("no database user configured");
 
     let database_url = format!(
-        "postgres://dvbdump:{}@{}:{}/dvbdump",
+        "postgres://{}:{}@{}:{}/dvbdump",
+        postgres_user,
         password,
         env::var("POSTGRES_HOST").unwrap_or(default_postgres_host),
         env::var("POSTGRES_PORT").unwrap_or(default_postgres_port)
@@ -57,21 +59,28 @@ pub fn get_redis_uri() -> String {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init();
     let args = Args::parse();
 
     if args.swagger {
-        println!("{}", routes::ApiDoc::openapi().to_pretty_json().unwrap());
+        println!(
+            "{}",
+            routes::ApiDoc::openapi()
+                .to_pretty_json()
+                .expect("could not format openapi spec!")
+        );
         return Ok(());
     }
+
+    env_logger::init();
 
     info!("Starting Data Collection Server ... ");
     let host = args.api_host.as_str();
     let port = args.port;
-    debug!("Listening on: {}:{}", host, port);
+    info!("Listening on: {}:{}", host, port);
 
     let connection_pool = web::Data::new(create_db_pool());
     let secret_key = Key::generate();
+
     HttpServer::new(move || {
         App::new()
             .wrap(IdentityMiddleware::default())
@@ -79,6 +88,7 @@ async fn main() -> std::io::Result<()> {
                 RedisActorSessionStore::new(get_redis_uri()),
                 secret_key.clone(),
             ))
+            .wrap(Logger::default())
             .app_data(connection_pool.clone())
             .service(
                 web::resource("/travel/submit/gpx")
@@ -94,12 +104,11 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/user/create", web::post().to(routes::user::user_create))
             .route("/user/login", web::post().to(routes::user::user_login))
-        /*.service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
-            (
-                Url::new("api", "/api-doc/openapi.json"),
-                routes::ApiDoc::openapi(),
-            ),
-        ])) */
+            .route("/run/correlate", web::post().to(routes::run::correlate_run))
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-doc/openapi.json", routes::ApiDoc::openapi()),
+            )
     })
     .bind((host, port))?
     .run()
