@@ -167,10 +167,14 @@ pub async fn correlate_run(
 
     // query r09 telegrams matching the timeframe of the run
     use tlms::schema::r09_telegrams::dsl::r09_telegrams;
+    use tlms::schema::r09_telegrams::line as tg_line;
+    use tlms::schema::r09_telegrams::run_number as tg_run;
     use tlms::schema::r09_telegrams::time as telegram_time;
     let telegrams: Vec<R09SaveTelegram> = match r09_telegrams
         .filter(telegram_time.ge(run.start_time))
         .filter(telegram_time.le(run.end_time))
+        .filter(tg_line.eq(run.line))
+        .filter(tg_run.eq(run.run))
         .load(&mut database_connection)
     {
         Ok(t) => t,
