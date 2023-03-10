@@ -316,20 +316,18 @@ pub async fn travel_file_upload(
     // iterate over multipart stream
     while let Ok(Some(mut field)) = payload.try_next().await {
         let _content_type = field.content_disposition();
-        let mut buffer: String = String::new();
+        let mut buffer: actix_web::web::BytesMut = actix_web::web::BytesMut::with_capacity(1024 * 256);
 
         // Merging all the multipart elements into one string
         while let Some(chunk) = field.next().await {
             let data = chunk.unwrap();
-            let data_string = data.escape_ascii().to_string();
-
-            buffer += &data_string;
+            buffer.extend(data);
         }
 
-        println!("debug gpx: {}", buffer);
+        println!("debug gpx: {:?}", buffer);
         
         // Deserializing the string into a gpx object
-        match gpx::read(buffer.as_bytes()) {
+        match gpx::read(buffer.as_ref()) {
             Ok(gpx) => {
                 // I feel like my IQ dropping around here, but dunno how to do it, especially given time
                 // situation in gpx crate
