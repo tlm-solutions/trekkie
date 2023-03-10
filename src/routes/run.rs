@@ -326,6 +326,8 @@ pub async fn travel_file_upload(
             buffer += &data_string;
         }
 
+        println!("debug gpx: {}", buffer);
+        
         // Deserializing the string into a gpx object
         match gpx::read(buffer.as_bytes()) {
             Ok(gpx) => {
