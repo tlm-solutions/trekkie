@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 tlms = { version = "0.8", git = "https://github.com/tlm-solutions/tlms.rs", tag = "v0.8.0", features = ["schema", "measurements", "telegrams", "trekkie", "management"]}
-lofi = { version = "0.3", git = "https://github.com/tlm-solutions/lofi", tag = "v0.3.0", features = [ "correlate" ] }
+lofi = { version = "0.3", git = "https://github.com/tlm-solutions/lofi", tag = "v0.3.1", features = [ "correlate" ] }
 
 clap = { version = "4.1", features = ["derive"] }
 
