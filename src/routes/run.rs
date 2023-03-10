@@ -288,7 +288,7 @@ pub async fn travel_submit_run(
 /// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
     post,
-    path = "/travel/submit/gpx",
+    path = "/travel/submit/gpx/{}",
     responses(
         (status = 200, description = "gpx file was successfully submitted", body = SubmitFile),
         (status = 500, description = "postgres pool error")
@@ -297,8 +297,8 @@ pub async fn travel_submit_run(
 pub async fn travel_file_upload(
     pool: web::Data<DbPool>,
     _user: Identity,
-    run: web::Json<SubmitRun>,
     mut payload: Multipart,
+    path: web::Path<(Uuid,)>,
     _req: HttpRequest,
 ) -> Result<HttpResponse, ServerError> {
     // getting the database connection from pool
@@ -336,7 +336,7 @@ pub async fn travel_file_upload(
                         for point in segment.points {
                             let soul = InsertGpsPoint {
                                 id: None,
-                                trekkie_run: run.trekkie_run,
+                                trekkie_run: path.0,
                                 lat: point.point().y(), // according to gpx crate team x and y are less
                                 lon: point.point().x(), // ambiguous for coordinates on a map
                                 elevation: point.elevation,

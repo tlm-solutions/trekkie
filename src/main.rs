@@ -91,7 +91,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(connection_pool.clone())
             .service(
-                web::resource("/travel/submit/gpx")
+                web::resource("/travel/submit/gpx/{trekkie_run}")
                     .route(web::post().to(routes::run::travel_file_upload)),
             )
             .route(
