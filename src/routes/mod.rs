@@ -1,3 +1,4 @@
+pub mod correlate;
 pub mod run;
 pub mod user;
 
@@ -6,7 +7,6 @@ use actix_web::{
     http::{header::ContentType, StatusCode},
     HttpResponse,
 };
-
 use derive_more::{Display, Error};
 use serde::{Deserialize, Serialize};
 use utoipa::{OpenApi, ToSchema};
@@ -31,9 +31,6 @@ pub enum ServerError {
 
     #[display(fmt = "Forbidden")]
     Forbidden,
-
-    #[display(fmt = "Not Implemented")]
-    NotImplemented,
 }
 
 impl error::ResponseError for ServerError {
@@ -49,7 +46,6 @@ impl error::ResponseError for ServerError {
             ServerError::BadClientData => StatusCode::BAD_REQUEST,
             ServerError::Unauthorized => StatusCode::UNAUTHORIZED,
             ServerError::Forbidden => StatusCode::FORBIDDEN,
-            ServerError::NotImplemented => StatusCode::NOT_IMPLEMENTED,
         }
     }
 }
@@ -60,7 +56,7 @@ impl error::ResponseError for ServerError {
         run::travel_submit_run,
         run::travel_file_upload,
         run::travel_list,
-        run::correlate_run,
+        correlate::correlate_run,
         user::user_login,
         user::user_create
     ),
@@ -68,8 +64,8 @@ impl error::ResponseError for ServerError {
         Response,
         user::UserCreation,
         user::UserLogin,
-        run::CorrelatePlease,
-        run::CorrelateResponse,
+        correlate::CorrelatePlease,
+        correlate::CorrelateResponse,
         run::SubmitTravel
     ))
 )]

@@ -1,7 +1,7 @@
 use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
-use tlms::management::user::{hash_password, verify_password, Role, User};
+use tlms::management::user::{hash_password, verify_password, User};
 
 use log::{error, info};
 use uuid::Uuid;
@@ -70,9 +70,9 @@ pub async fn user_create(
             name: None,
             email: None,
             password: hashed_password,
-            role: Role::Trekkie as i32,
             deactivated: false,
             email_setting: None,
+            admin: false,
         })
         .execute(&mut database_connection)
     {
