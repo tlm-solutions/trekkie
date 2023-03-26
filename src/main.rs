@@ -3,19 +3,15 @@ mod structs;
 
 use structs::Args;
 
-use clap::Parser;
-use log::{debug, info};
-
-use diesel::r2d2::ConnectionManager;
-use diesel::r2d2::Pool;
-use diesel::PgConnection;
-
-use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
-
 use actix_identity::IdentityMiddleware;
 use actix_session::storage::RedisActorSessionStore;
 use actix_session::SessionMiddleware;
-
+use actix_web::{cookie::Key, middleware::Logger, web, App, HttpServer};
+use clap::Parser;
+use diesel::r2d2::ConnectionManager;
+use diesel::r2d2::Pool;
+use diesel::PgConnection;
+use log::{debug, info};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -104,7 +100,10 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/user/create", web::post().to(routes::user::user_create))
             .route("/user/login", web::post().to(routes::user::user_login))
-            .route("/run/correlate", web::post().to(routes::run::correlate_run))
+            .route(
+                "/run/correlate",
+                web::post().to(routes::correlate::correlate_run),
+            )
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", routes::ApiDoc::openapi()),
