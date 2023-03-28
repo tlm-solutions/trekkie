@@ -33,7 +33,7 @@ pub fn create_db_pool() -> DbPool {
     let postgres_user = env::var("POSTGRES_USER").expect("no database user configured");
 
     let database_url = format!(
-        "postgres://{}:{}@{}:{}/dvbdump",
+        "postgres://{}:{}@{}:{}/tlms",
         postgres_user,
         password,
         env::var("POSTGRES_HOST").unwrap_or(default_postgres_host),
