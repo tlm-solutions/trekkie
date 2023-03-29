@@ -25,7 +25,8 @@ pub fn create_db_pool() -> DbPool {
     let default_postgres_port = String::from("5432");
     let default_postgres_database = String::from("tlms");
 
-    let password_path = env::var("TREKKIE_POSTGRES_PASSWORD_PATH").expect("DB password was not specified");
+    let password_path =
+        env::var("TREKKIE_POSTGRES_PASSWORD_PATH").expect("DB password was not specified");
     let password = fs::read_to_string(password_path).expect("cannot read password file!");
     let postgres_user = env::var("TREKKIE_POSTGRES_USER").expect("no database user configured");
 
