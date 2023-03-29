@@ -15,7 +15,7 @@
     ];
   };
 
-  environment.systemPackages = [ inputs.tlms-rs.packages.x86_64-linux.run-migration ];
+  environment.systemPackages = [ inputs.tlms-rs.packages.x86_64-linux.run-migration-based ];
 
   systemd.services.postgresql = {
     unitConfig = {
@@ -28,7 +28,7 @@
       $PSQL -c "ALTER ROLE tlms WITH PASSWORD '$(cat ${inputs.self}/tests/vm/test-pw)';"
 
       export DATABASE_URL=postgres:///tlms
-      ${inputs.tlms-rs.packages.x86_64-linux.run-migration}/bin/run-migration
+      ${inputs.tlms-rs.packages.x86_64-linux.run-migration-based}/bin/run-migration
 
       # fix the permissions for tlms user on migration-created tables
       $PSQL -c "GRANT ALL ON DATABASE tlms TO tlms;"
