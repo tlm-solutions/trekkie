@@ -2690,7 +2690,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 [[package]]
 name = "tlms"
 version = "0.9.0"
-source = "git+https://github.com/tlm-solutions/tlms.rs#c2e29033a697b8963058b41049a08718c04347df"
+source = "git+https://github.com/tlm-solutions/tlms.rs#dcba7e38b090f23cf64918e985a4bfa3dffa20b0"
 dependencies = [
  "chrono",
  "csv",
@@ -2928,7 +2928,7 @@ dependencies = [
 
 [[package]]
 name = "trekkie"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "actix",
  "actix-identity",
