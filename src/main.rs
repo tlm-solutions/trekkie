@@ -23,17 +23,20 @@ type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 pub fn create_db_pool() -> DbPool {
     let default_postgres_host = String::from("localhost:5433");
     let default_postgres_port = String::from("5432");
+    let default_postgres_database = String::from("tlms");
 
-    let password_path = env::var("POSTGRES_PASSWORD_PATH").expect("DB password was not specified");
+    let password_path =
+        env::var("TREKKIE_POSTGRES_PASSWORD_PATH").expect("DB password was not specified");
     let password = fs::read_to_string(password_path).expect("cannot read password file!");
-    let postgres_user = env::var("POSTGRES_USER").expect("no database user configured");
+    let postgres_user = env::var("TREKKIE_POSTGRES_USER").expect("no database user configured");
 
     let database_url = format!(
-        "postgres://{}:{}@{}:{}/dvbdump",
+        "postgres://{}:{}@{}:{}/{}",
         postgres_user,
         password,
-        env::var("POSTGRES_HOST").unwrap_or(default_postgres_host),
-        env::var("POSTGRES_PORT").unwrap_or(default_postgres_port)
+        env::var("TREKKIE_POSTGRES_HOST").unwrap_or(default_postgres_host),
+        env::var("TREKKIE_POSTGRES_PORT").unwrap_or(default_postgres_port),
+        env::var("TREKKIE_POSTGRES_DATABAE").unwrap_or(default_postgres_database)
     );
 
     debug!("Connecting to postgres database {}", &database_url);
@@ -48,8 +51,8 @@ pub fn get_redis_uri() -> String {
 
     format!(
         "{}:{}",
-        std::env::var("REDIS_HOST").unwrap_or(default_redis_host),
-        std::env::var("REDIS_PORT").unwrap_or(default_redis_port)
+        std::env::var("TREKKIE_REDIS_HOST").unwrap_or(default_redis_host),
+        std::env::var("TREKKIE_REDIS_PORT").unwrap_or(default_redis_port)
     )
 }
 

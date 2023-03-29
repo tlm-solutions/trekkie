@@ -47,7 +47,7 @@ in
       };
       user = mkOption {
         type = types.str;
-        default = "dvbdump";
+        default = "tlms";
         description = ''
           Database User to connect as
         '';
@@ -56,6 +56,13 @@ in
         type = types.either types.path types.string;
         default = "";
         description = ''password file from which the postgres password can be read'';
+      };
+      database = mkOption {
+        type = types.str;
+        default = "tlms";
+        description = ''
+          Database which should be used
+        '';
       };
     };
     redis = {
@@ -104,43 +111,25 @@ in
 
     systemd = {
       services = {
-        "setup-trekkie" = {
-          wantedBy = [ "multi-user.target" ];
-          script = ''
-            mkdir -p /var/lib/trekkie
-            chmod 755 /var/lib/trekkie
-            chown ${config.systemd.services.trekkie.serviceConfig.User} /var/lib/trekkie
-            chgrp ${config.users.groups.TLMS-radio.name} /var/lib/trekkie
-            mkdir -p /var/lib/trekkie/gpx
-            chmod 755 /var/lib/trekkie/gpx
-            chown ${config.systemd.services.trekkie.serviceConfig.User} /var/lib/trekkie/gpx
-            chgrp ${config.users.groups.TLMS-radio.name} /var/lib/trekkie/gpx
-
-          '';
-
-          serviceConfig = {
-            Type = "oneshot";
-          };
-        };
-
         "trekkie" = {
           enable = true;
-          wantedBy = [ "multi-user.target" "setup-trekkie.service" ];
+          wantedBy = [ "multi-user.target" ];
 
           script = ''
             exec ${pkgs.trekkie}/bin/trekkie --api-host ${cfg.host} --port ${toString cfg.port}&
           '';
 
           environment = {
-            "POSTGRES_PASSWORD_PATH" = "${cfg.database.passwordFile}";
             "RUST_LOG" = "${cfg.logLevel}";
             "RUST_BACKTRACE" = if (cfg.logLevel == "info") then "0" else "1";
-            "POSTGRES_HOST" = "${cfg.database.host}";
-            "POSTGRES_PORT" = "${toString cfg.database.port}";
-            "POSTGRES_USER" = "${cfg.database.user}";
             "SALT_PATH" = "${cfg.saltPath}";
-            "REDIS_PORT" = "${toString cfg.redis.port}";
-            "REDIS_HOST" = "${cfg.redis.host}";
+            "TREKKIE_POSTGRES_PASSWORD_PATH" = "${cfg.database.passwordFile}";
+            "TREKKIE_POSTGRES_HOST" = "${cfg.database.host}";
+            "TREKKIE_POSTGRES_PORT" = "${toString cfg.database.port}";
+            "TREKKIE_POSTGRES_USER" = "${cfg.database.user}";
+            "TREKKIE_POSTGRES_DATABASE" = "${cfg.database.database}";
+            "TREKKIE_REDIS_PORT" = "${toString cfg.redis.port}";
+            "TREKKIE_REDIS_HOST" = "${cfg.redis.host}";
           };
 
           serviceConfig = {

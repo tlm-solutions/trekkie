@@ -2,7 +2,7 @@
 
 naersk.buildPackage {
   pname = "trekkie";
-  version = "0.1.0";
+  version = "0.2.1";
 
   src = ./.;
 
@@ -13,6 +13,6 @@ naersk.buildPackage {
 
   meta = {
     description = "Simple rust server which collects gps tracks and measurement intervals";
-    homepage = "https://github.com/dump-dvb/trekkie";
+    homepage = "https://github.com/tlm-solutions/trekkie";
   };
 }
