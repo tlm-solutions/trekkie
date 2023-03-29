@@ -3,12 +3,12 @@
     enable = true;
     port = 5432;
     package = pkgs.postgresql_14;
-    ensureDatabases = [ "dvbdump" ];
+    ensureDatabases = [ "tlms" ];
     ensureUsers = [
       {
-        name = "dvbdump";
+        name = "tlms";
         ensurePermissions = {
-          "DATABASE dvbdump" = "ALL PRIVILEGES";
+          "DATABASE tlms" = "ALL PRIVILEGES";
           "ALL TABLES IN SCHEMA public" = "ALL";
         };
       }
@@ -25,15 +25,15 @@
       TimeoutSec = lib.mkForce 3000;
     };
     postStart = lib.mkAfter ''
-      $PSQL -c "ALTER ROLE dvbdump WITH PASSWORD '$(cat ${inputs.self}/tests/vm/test-pw)';"
+      $PSQL -c "ALTER ROLE tlms WITH PASSWORD '$(cat ${inputs.self}/tests/vm/test-pw)';"
 
-      export DATABASE_URL=postgres:///dvbdump
+      export DATABASE_URL=postgres:///tlms
       ${inputs.tlms-rs.packages.x86_64-linux.run-migration}/bin/run-migration
 
-      # fix the permissions for dvbdump user on migration-created tables
-      $PSQL -c "GRANT ALL ON DATABASE dvbdump TO dvbdump;"
-      $PSQL -d dvbdump -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO dvbdump;"
-      $PSQL -d dvbdump -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO dvbdump;"
+      # fix the permissions for tlms user on migration-created tables
+      $PSQL -c "GRANT ALL ON DATABASE tlms TO tlms;"
+      $PSQL -d tlms -c "GRANT ALL ON ALL TABLES IN SCHEMA public TO tlms;"
+      $PSQL -d tlms -c "GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO tlms;"
       unset DATABASE_URL
     '';
   };

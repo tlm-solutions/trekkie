@@ -40,11 +40,14 @@ For the full OpenAPI spec take a look at the `swagger.yaml` in this repository.
 
 ### Environment Variables
 
-- **REDIS_HOST**
-- **REDIS_PORT**
-- **GPX_PATH**
-- **POSTGRES_HOST**
-- **POSTGRES_PORT**
+- **TREKKIE_REDIS_HOST**
+- **TREKKIE_REDIS_PORT**
+- **TREKKIE_POSTGRES_HOST**
+- **TREKKIE_POSTGRES_PORT**
+- **TREKKIE_POSTGRES_USER**
+- **TREKKIE_POSTGRES_DATABASE**
+- **TREKKIE_POSTGRES_PASSWORD_PATH**
+- **SALT_PATH**
 
 ### Command Line
 

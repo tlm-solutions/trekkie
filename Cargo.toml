@@ -1,11 +1,11 @@
 [package]
 name = "trekkie"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
 [dependencies]
 tlms = { version = "0.9", git = "https://github.com/tlm-solutions/tlms.rs", features = [ "measurements", "telegrams", "trekkie", "management"]}
-lofi = { version = "0.3", git = "https://github.com/tlm-solutions/lofi", features = [ "correlate" ] }
+lofi = { version = "0.3", git = "https://github.com/tlm-solutions/lofi"}
 
 clap = { version = "4.1", features = ["derive"] }
 
