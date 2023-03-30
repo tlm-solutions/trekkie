@@ -10,7 +10,7 @@ use tlms::trekkie::TrekkieRun;
 use actix_identity::Identity;
 use actix_web::{web, HttpRequest};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use log::{error, warn};
+use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -104,6 +104,20 @@ pub async fn correlate_run(
         return Err(ServerError::Forbidden);
     }
 
+    if run.correlated {
+        info!(
+            "User {usr} requested to correlate trekkie run {r}, which is already correlated.",
+            usr = req_user.user.id,
+            r = run.id
+        );
+        warn!("Run already correlated. Correlation step skipped.");
+
+        return Ok(web::Json(CorrelateResponse {
+            success: true,
+            new_raw_transmission_locations: 0,
+        }));
+    }
+
     use tlms::schema::gps_points::dsl::gps_points;
     use tlms::schema::gps_points::trekkie_run;
     let queried_gps: Vec<GpsPoint> = match gps_points
@@ -165,6 +179,20 @@ pub async fn correlate_run(
     {
         Ok(r) => r,
         Err(_) => return Err(ServerError::InternalError),
+    };
+
+    // Update correlated flag in the trekkie_runs db
+    use tlms::schema::trekkie_runs::correlated as trekkie_corr_flag;
+    match diesel::update(trekkie_runs)
+        .filter(run_id.eq(corr_request.run_id))
+        .set(trekkie_corr_flag.eq(true))
+        .execute(&mut database_connection)
+    {
+        Ok(ok) => ok,
+        Err(e) => {
+            error!("while trying to set `correlated` flag in trekkie_runs: {e:?}");
+            return Err(ServerError::InternalError);
+        }
     };
 
     Ok(web::Json(CorrelateResponse {
