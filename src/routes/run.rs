@@ -77,6 +77,7 @@ pub async fn travel_submit_run(
             region: measurement.run.region,
             owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
             finished: true,
+            correlated: false,
         })
         .execute(&mut database_connection)
     {
