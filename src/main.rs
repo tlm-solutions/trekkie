@@ -108,6 +108,7 @@ async fn main() -> std::io::Result<()> {
                 "/run/correlate",
                 web::post().to(routes::correlate::correlate_run),
             )
+            .route("/locations/update_all", web::post().to(routes::correlate::update_all_transmission_locations))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", routes::ApiDoc::openapi()),

@@ -1,9 +1,15 @@
+use std::collections::HashMap;
+
 use crate::routes::ServerError;
 use crate::utils::get_authorized_user;
 use crate::DbPool;
 
+use diesel::upsert::on_constraint;
 use lofi::correlate::correlate_trekkie_run;
 use tlms::locations::gps::GpsPoint;
+use tlms::locations::{
+    InsertTransmissionLocation, InsertTransmissionLocationRaw, TransmissionLocationRaw,
+};
 use tlms::telegrams::r09::R09SaveTelegram;
 use tlms::trekkie::TrekkieRun;
 
@@ -31,6 +37,107 @@ pub struct CorrelateResponse {
     pub new_raw_transmission_locations: i64,
 }
 
+/// Request to update all transmission locations
+#[derive(Serialize, Deserialize, ToSchema, Debug)]
+pub struct UpdateAllLocationsResponse {
+    /// amount of upserted positions
+    rows_affected: usize,
+}
+
+/// This endpoint takes all the transmission_locaions_raw, and dedupes them into the transmission
+/// locations. If location exists, updates it, if not: inserts it. Needless to say: this is
+/// extremely expensive endpoint, so requires admin privelege.
+#[utoipa::path(
+    post,
+    path = "/locations/update_all",
+    responses(
+        (status = 200, description = "Correlation Successful", body = CorrelateAllResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 403, description = "Forbidden"),
+        (status = 500, description = "Interal Error"),
+        (status = 501, description = "Not Implemented"),
+    ),
+)]
+pub async fn update_all_transmission_locations(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    _req: HttpRequest,
+) -> Result<web::Json<UpdateAllLocationsResponse>, ServerError> {
+    // get connection from the pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    // Get the user and privileges
+    let req_user = get_authorized_user(user, pool)?;
+
+    if !req_user.is_admin() {
+        error!(
+            "User {usr} is not admin, and requested to update all positions!",
+            usr = req_user.user.id
+        );
+        return Err(ServerError::Forbidden);
+    }
+
+    // Load the raw runs wholesale
+    use tlms::schema::r09_transmission_locations_raw::dsl::r09_transmission_locations_raw;
+    let raw_locs: Vec<TransmissionLocationRaw> =
+        match r09_transmission_locations_raw.load(&mut database_connection) {
+            Ok(l) => l,
+            Err(e) => {
+                error!("while trying to fetch r09_transmission_locations_raw: {e}");
+                return Err(ServerError::InternalError);
+            }
+        };
+
+    // group the locations by region/location
+    let mut raw_loc_groups: HashMap<(i64, i32), Vec<TransmissionLocationRaw>> = HashMap::new();
+    for i in raw_locs {
+        raw_loc_groups
+            .entry((i.region, i.reporting_point))
+            .or_insert(Vec::new())
+            .push(i);
+    }
+
+    // convert raw locations to deduped ones
+    let ins_deduped_locs: Vec<InsertTransmissionLocation> = raw_loc_groups
+        .iter()
+        .map(|(_k, v)| InsertTransmissionLocation::try_from_raw(v.clone()))
+        .filter_map(|res| {
+            res.map_err(|_e| {
+                error!("Error while deduping raw locations into production ones!");
+            })
+            .ok()
+        })
+        .collect();
+
+    // upsert the deduped locations
+    use diesel::pg::upsert::excluded;
+    use tlms::schema::r09_transmission_locations::dsl::r09_transmission_locations;
+    use tlms::schema::r09_transmission_locations::lat;
+    use tlms::schema::r09_transmission_locations::lon;
+    let rows_affected = match diesel::insert_into(r09_transmission_locations)
+        .values(&ins_deduped_locs)
+        .on_conflict(on_constraint(
+            tlms::locations::REGION_POSITION_UNIQUE_CONSTRAINT,
+        ))
+        .do_update()
+        .set((lat.eq(excluded(lat)), lon.eq(excluded(lon))))
+        .execute(&mut database_connection)
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            error!("While trying to upsert into r09_transmission_locations: {e}");
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    Ok(web::Json(UpdateAllLocationsResponse { rows_affected }))
+}
 /// This endpoint would correlate runs for given user id. For regular user only own runs
 /// can be correlated, for admin - any run for any user
 #[utoipa::path(
