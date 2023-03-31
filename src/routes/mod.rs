@@ -57,6 +57,7 @@ impl error::ResponseError for ServerError {
         run::travel_file_upload,
         run::travel_list,
         correlate::correlate_run,
+        correlate::correlate_all,
         user::user_login,
         user::user_create
     ),
@@ -65,6 +66,7 @@ impl error::ResponseError for ServerError {
         user::UserCreation,
         user::UserLogin,
         correlate::CorrelatePlease,
+        correlate::CorrelateAllRequest,
         correlate::CorrelateResponse,
         run::SubmitTravel
     ))

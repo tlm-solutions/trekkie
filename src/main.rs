@@ -1,5 +1,6 @@
 mod routes;
 mod structs;
+mod utils;
 
 use structs::Args;
 
@@ -106,6 +107,14 @@ async fn main() -> std::io::Result<()> {
             .route(
                 "/run/correlate",
                 web::post().to(routes::correlate::correlate_run),
+            )
+            .route(
+                "/run/correlate_all",
+                web::post().to(routes::correlate::correlate_all),
+            )
+            .route(
+                "/locations/update_all",
+                web::post().to(routes::correlate::update_all_transmission_locations),
             )
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
