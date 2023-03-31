@@ -73,7 +73,7 @@ pub async fn update_all_transmission_locations(
     };
 
     // Get the user and privileges
-    let req_user = get_authorized_user(user, pool)?;
+    let req_user = get_authorized_user(user, &pool)?;
 
     if !req_user.is_admin() {
         error!(
@@ -167,7 +167,7 @@ pub async fn correlate_run(
     };
 
     // Get the user and privileges
-    let req_user = get_authorized_user(user, pool)?;
+    let req_user = get_authorized_user(user, &pool)?;
 
     use tlms::schema::trekkie_runs::dsl::trekkie_runs;
     use tlms::schema::trekkie_runs::id as run_id;

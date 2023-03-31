@@ -1,12 +1,15 @@
-use crate::DbPool;
 use crate::routes::ServerError;
+use crate::DbPool;
 
-use uuid::Uuid;
 use log::error;
+use uuid::Uuid;
 
 use tlms::management::user::AuthorizedUser;
 
-pub fn get_authorized_user(user: actix_identity::Identity, pool: actix_web::web::Data<DbPool>) -> Result<AuthorizedUser, ServerError> {
+pub fn get_authorized_user(
+    user: actix_identity::Identity,
+    pool: &actix_web::web::Data<DbPool>,
+) -> Result<AuthorizedUser, ServerError> {
     // get connection from the pool
     let mut database_connection = match pool.get() {
         Ok(conn) => conn,
@@ -32,9 +35,8 @@ pub fn get_authorized_user(user: actix_identity::Identity, pool: actix_web::web:
     };
 
     // Get the user and privileges
-        match AuthorizedUser::from_postgres(&uuid, &mut database_connection) {
-            Some(user) => Ok(user),
-            None => Err(ServerError::Unauthorized),
-        }
+    match AuthorizedUser::from_postgres(&uuid, &mut database_connection) {
+        Some(user) => Ok(user),
+        None => Err(ServerError::Unauthorized),
+    }
 }
-
