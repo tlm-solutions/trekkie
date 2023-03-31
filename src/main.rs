@@ -1,5 +1,6 @@
 mod routes;
 mod structs;
+mod utils;
 
 use structs::Args;
 

@@ -1,9 +1,9 @@
 use crate::routes::ServerError;
+use crate::utils::get_authorized_user;
 use crate::DbPool;
 
 use lofi::correlate::correlate_trekkie_run;
 use tlms::locations::gps::GpsPoint;
-use tlms::management::user::AuthorizedUser;
 use tlms::telegrams::r09::R09SaveTelegram;
 use tlms::trekkie::TrekkieRun;
 
@@ -59,29 +59,8 @@ pub async fn correlate_run(
         }
     };
 
-    // Parse the user id
-    let uuid: Uuid = match user.id() {
-        Ok(id) => match Uuid::parse_str(&id) {
-            Ok(uid) => uid,
-            Err(e) => {
-                error!("While parsing user UUID: {e}");
-                return Err(ServerError::Unauthorized);
-            }
-        },
-        Err(e) => {
-            error!("While trying to read user id from request: {e}");
-            return Err(ServerError::Unauthorized);
-        }
-    };
-
     // Get the user and privileges
-    let req_user: AuthorizedUser =
-        match AuthorizedUser::from_postgres(&uuid, &mut database_connection) {
-            Some(user) => user,
-            None => {
-                return Err(ServerError::Unauthorized);
-            }
-        };
+    let req_user = get_authorized_user(user, pool)?;
 
     use tlms::schema::trekkie_runs::dsl::trekkie_runs;
     use tlms::schema::trekkie_runs::id as run_id;
