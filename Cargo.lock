@@ -1703,16 +1703,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lofi"
-version = "0.3.1"
-source = "git+https://github.com/tlm-solutions/lofi#0cbe2fdb5eca2006cf419bed9349404fec885170"
-dependencies = [
- "serde_json",
- "tlms",
- "uuid",
-]
-
-[[package]]
 name = "log"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2942,7 +2932,6 @@ dependencies = [
  "env_logger",
  "futures",
  "gpx",
- "lofi",
  "log",
  "r2d2",
  "rand",
