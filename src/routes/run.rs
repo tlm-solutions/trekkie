@@ -7,7 +7,7 @@ use tlms::trekkie::TrekkieRun;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
-use actix_web::{web, HttpRequest, HttpResponse};
+use actix_web::{web, HttpRequest, HttpResponse, post, get};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
@@ -50,6 +50,7 @@ pub struct SubmitRun {
         (status = 500, description = "postgres pool error")
     ),
 )]
+#[post("/travel/submit/run")]
 pub async fn travel_submit_run(
     pool: web::Data<DbPool>,
     user: Identity,
@@ -100,6 +101,7 @@ pub async fn travel_submit_run(
         (status = 500, description = "postgres pool error")
     ),
 )]
+#[post("/travel/submit/gpx/{id}")]
 pub async fn travel_file_upload(
     pool: web::Data<DbPool>,
     _user: Identity,
@@ -198,6 +200,7 @@ pub async fn travel_file_upload(
         (status = 500, description = "postgres pool error")
     ),
 )]
+#[get("/travel/submit/list")]
 pub async fn travel_list(
     pool: web::Data<DbPool>,
     user: Identity,

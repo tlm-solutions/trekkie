@@ -90,19 +90,14 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(connection_pool.clone())
             .service(
-                web::resource("/travel/submit/gpx/{trekkie_run}")
-                    .route(web::post().to(routes::run::travel_file_upload)),
+                web::scope("/v1")
+                    .service(routes::run::travel_file_upload)
+                    .service(routes::run::travel_submit_run)
+                    .service(routes::run::travel_list)
+                    .service(routes::user::user_create)
+                    .service(routes::user::user_login)
+
             )
-            .route(
-                "/travel/submit/run",
-                web::post().to(routes::run::travel_submit_run),
-            )
-            .route(
-                "/travel/submit/list",
-                web::get().to(routes::run::travel_list),
-            )
-            .route("/user/create", web::post().to(routes::user::user_create))
-            .route("/user/login", web::post().to(routes::user::user_login))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")
                     .url("/api-doc/openapi.json", routes::ApiDoc::openapi()),
