@@ -15,22 +15,18 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
 /// This model is needed after submitting a file the id references the id in the [`SubmitFile`] model.
 /// The vehicles are measurements intervals recording start / end and which vehicle in the city was
 /// taken
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravel {
-    #[schema(example = "
-    [ {
-        start: Utc::now().naive_utc(),
-        end: Utc::now().naive_utc(),
-        line: 69,
-        run: 42,
-        region: 0
-    } ]")]
-    #[serde(flatten)]
-    pub run: FinishedMeasurementInterval,
+    pub start: DateTime<Utc>,
+    pub stop: DateTime<Utc>,
+    pub line: i32,
+    pub run: i32,
+    pub region: i64
 }
 
 /// This model is returned after uploading a file. It returns the travel id, which is used for
@@ -71,11 +67,11 @@ pub async fn travel_submit_run(
     match diesel::insert_into(trekkie_runs)
         .values(&TrekkieRun {
             id: run_id,
-            start_time: measurement.run.start,
-            end_time: measurement.run.stop,
-            line: measurement.run.line,
-            run: measurement.run.run,
-            region: measurement.run.region,
+            start_time: measurement.start.naive_utc(),
+            end_time: measurement.stop.naive_utc(),
+            line: measurement.line,
+            run: measurement.run,
+            region: measurement.region,
             owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
             finished: true,
             correlated: false,
@@ -154,7 +150,7 @@ pub async fn travel_file_upload(
                                         &time.format().unwrap(),
                                         "%Y-%m-%dT%H:%M:%SZ",
                                     )
-                                    .unwrap(),
+                                    .unwrap(), //TODO: fix the unwrap
                                     None => break,
                                 },
 
