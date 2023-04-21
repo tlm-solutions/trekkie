@@ -52,12 +52,13 @@ impl error::ResponseError for ServerError {
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        run::travel_submit_run,
+        run::travel_submit_run_v1,
+        run::travel_submit_run_v2,
         run::travel_file_upload,
         run::travel_list,
         user::user_login,
         user::user_create
     ),
-    components(schemas(Response, user::UserCreation, user::UserLogin, run::SubmitTravel))
+    components(schemas(Response, user::UserCreation, user::UserLogin, run::SubmitTravelV1, run::SubmitTravelV2))
 )]
 pub struct ApiDoc;

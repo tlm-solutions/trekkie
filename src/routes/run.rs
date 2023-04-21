@@ -15,18 +15,29 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Duration};
 
 /// This model is needed after submitting a file the id references the id in the [`SubmitFile`] model.
 /// The vehicles are measurements intervals recording start / end and which vehicle in the city was
 /// taken
 #[derive(Serialize, Deserialize, ToSchema)]
-pub struct SubmitTravel {
+pub struct SubmitTravelV1 {
     pub start: DateTime<Utc>,
     pub stop: DateTime<Utc>,
     pub line: i32,
     pub run: i32,
     pub region: i64
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct SubmitTravelV2 {
+    pub start: DateTime<Utc>,
+    pub stop: DateTime<Utc>,
+    pub line: i32,
+    pub run: i32,
+    pub region: i64,
+    pub app_commit: String,
+    pub app_name: String
 }
 
 /// This model is returned after uploading a file. It returns the travel id, which is used for
@@ -47,10 +58,64 @@ pub struct SubmitRun {
     ),
 )]
 #[post("/travel/submit/run")]
-pub async fn travel_submit_run(
+pub async fn travel_submit_run_v1(
     pool: web::Data<DbPool>,
     user: Identity,
-    measurement: web::Json<SubmitTravel>,
+    measurement: web::Json<SubmitTravelV1>,
+    _req: HttpRequest,
+) -> Result<web::Json<SubmitRun>, ServerError> {
+    // getting the database connection from pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
+    let run_id = Uuid::new_v4();
+    match diesel::insert_into(trekkie_runs)
+        .values(&TrekkieRun {
+            id: run_id,
+            start_time: measurement.start.naive_utc() - Duration::hours(2),
+            end_time: measurement.stop.naive_utc() - Duration::hours(2),
+            line: measurement.line,
+            run: measurement.run,
+            region: measurement.region,
+            owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
+            finished: true,
+            correlated: false,
+            app_commit: "0000000000000000000000000000000000000000".to_string(),
+            app_name: "stasi".to_string()
+        })
+        .execute(&mut database_connection)
+    {
+        Ok(_result) => Ok(web::Json(SubmitRun {
+            trekkie_run: run_id,
+        })),
+        Err(e) => {
+            error!("while trying to insert trekkie run {:?}", e);
+            Err(ServerError::InternalError)
+        }
+    }
+}
+
+/// This endpoint accepts measurement intervals that belong to the previously submitted gpx
+/// file.
+#[utoipa::path(
+    post,
+    path = "/travel/submit/run",
+    responses(
+        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
+#[post("/travel/submit/run")]
+pub async fn travel_submit_run_v2(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    measurement: web::Json<SubmitTravelV2>,
     _req: HttpRequest,
 ) -> Result<web::Json<SubmitRun>, ServerError> {
     // getting the database connection from pool
@@ -75,6 +140,8 @@ pub async fn travel_submit_run(
             owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
             finished: true,
             correlated: false,
+            app_commit: measurement.app_commit.clone(),
+            app_name: measurement.app_name.clone()
         })
         .execute(&mut database_connection)
     {
