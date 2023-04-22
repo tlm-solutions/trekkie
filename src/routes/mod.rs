@@ -30,6 +30,9 @@ pub enum ServerError {
 
     #[display(fmt = "Forbidden")]
     Forbidden,
+
+    #[display(fmt = "Conflict")]
+    Conflict,
 }
 
 impl error::ResponseError for ServerError {
@@ -45,6 +48,7 @@ impl error::ResponseError for ServerError {
             ServerError::BadClientData => StatusCode::BAD_REQUEST,
             ServerError::Unauthorized => StatusCode::UNAUTHORIZED,
             ServerError::Forbidden => StatusCode::FORBIDDEN,
+            ServerError::Conflict => StatusCode::CONFLICT,
         }
     }
 }
@@ -56,9 +60,17 @@ impl error::ResponseError for ServerError {
         run::travel_submit_run_v2,
         run::travel_file_upload,
         run::submit_gps_live,
+        run::terminate_run,
         user::user_login,
         user::user_create
     ),
-    components(schemas(Response, user::UserCreation, user::UserLogin, run::SubmitTravelV1, run::SubmitTravelV2))
+    components(schemas(
+        Response, 
+        user::UserCreation, 
+        user::UserLogin, 
+        run::SubmitTravelV1, 
+        run::SubmitTravelV2,
+        run::SubmitGpsPoint
+    ))
 )]
 pub struct ApiDoc;

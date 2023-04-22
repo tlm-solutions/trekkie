@@ -6,7 +6,7 @@ use tlms::trekkie::TrekkieRun;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
-use actix_web::{web, HttpRequest, HttpResponse, post};
+use actix_web::{web, HttpRequest, HttpResponse, post, delete};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
@@ -167,9 +167,7 @@ pub async fn travel_submit_run_v2(
     }
 }
 
-
-/// This endpoint accepts measurement intervals that belong to the previously submitted gpx
-/// file.
+/// this endpoint takes live gps data from stasi apps
 #[utoipa::path(
     post,
     path = "/trekkie/{id}/live",
@@ -214,6 +212,10 @@ pub async fn submit_gps_live(
     if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
         return Err(ServerError::Forbidden);
     }
+
+    if trekkie_run.finished {
+        return Err(ServerError::Conflict);
+    }
     
     use tlms::schema::gps_points::dsl::gps_points;
 
@@ -240,6 +242,71 @@ pub async fn submit_gps_live(
         }
     }
 }
+
+/// this endpoint takes live gps data from stasi apps
+#[utoipa::path(
+    delete,
+    path = "/trekkie/{id}/live",
+    responses(
+        (status = 200, description = "run was successfully terminated",),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
+#[delete("/trekkie/{id}/live")]
+pub async fn terminate_run(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    path: web::Path<(Uuid,)>,
+    _req: HttpRequest,
+) -> Result<HttpResponse, ServerError> {
+    // getting the database connection from pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    let user_session = fetch_user(user, &mut database_connection)?;
+
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::id as trekkie_id;
+    use tlms::schema::trekkie_runs::finished;
+
+    let trekkie_run = match trekkie_runs
+        .filter(trekkie_id.eq(path.0))
+        .first::<TrekkieRun>(&mut database_connection)
+    {
+        Ok(trekkie_run) => trekkie_run,
+        Err(e) => {
+            error!("database error while listing trekkie_runs {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
+        return Err(ServerError::Forbidden);
+    }
+
+    if trekkie_run.finished {
+        return Err(ServerError::Conflict);
+    }
+
+    match diesel::update(trekkie_runs)
+        .filter(trekkie_id.eq(path.0))
+        .set(finished.eq(true))
+        .execute(&mut database_connection) {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => {
+            error!("cannot finish this trekkie run with error {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    }
+    
+}
+
+
 
 /// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
@@ -286,6 +353,10 @@ pub async fn travel_file_upload(
 
     if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
         return Err(ServerError::Forbidden);
+    }
+
+    if trekkie_run.finished {
+        return Err(ServerError::Conflict);
     }
 
     // collection of gps points
