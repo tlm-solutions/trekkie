@@ -7,7 +7,7 @@ use log::{error, info};
 use uuid::Uuid;
 
 use actix_identity::Identity;
-use actix_web::{web, HttpMessage, HttpRequest, post, get};
+use actix_web::{web, HttpMessage, HttpRequest, post};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, PgConnection};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
@@ -55,13 +55,13 @@ pub fn fetch_user(
 /// user information and a session cookie are returned
 #[utoipa::path(
     post,
-    path = "/user/create",
+    path = "/user",
     responses(
         (status = 200, description = "trekkie user was successfully created", body = crate::routes::UserCreation),
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/user/create")]
+#[post("/user")]
 pub async fn user_create(
     pool: web::Data<DbPool>,
     req: HttpRequest,
@@ -125,7 +125,7 @@ pub async fn user_create(
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/user/login")]
+#[post("/auth/login")]
 pub async fn user_login(
     pool: web::Data<DbPool>,
     body: web::Json<UserLogin>,

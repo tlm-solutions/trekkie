@@ -55,7 +55,7 @@ impl error::ResponseError for ServerError {
         run::travel_submit_run_v1,
         run::travel_submit_run_v2,
         run::travel_file_upload,
-        run::travel_list,
+        run::submit_gps_live,
         user::user_login,
         user::user_create
     ),

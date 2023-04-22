@@ -93,7 +93,6 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/v1")
                     .service(routes::run::travel_file_upload)
                     .service(routes::run::travel_submit_run_v1)
-                    .service(routes::run::travel_list)
                     .service(routes::user::user_create)
                     .service(routes::user::user_login)
 
@@ -102,7 +101,7 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/v2")
                     .service(routes::run::travel_file_upload)
                     .service(routes::run::travel_submit_run_v2)
-                    .service(routes::run::travel_list)
+                    .service(routes::run::submit_gps_live)
                     .service(routes::user::user_create)
                     .service(routes::user::user_login)
 

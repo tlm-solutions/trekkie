@@ -2,12 +2,11 @@ use crate::routes::{ServerError, user::fetch_user};
 use crate::DbPool;
 
 use tlms::locations::gps::InsertGpsPoint;
-use tlms::measurements::FinishedMeasurementInterval;
 use tlms::trekkie::TrekkieRun;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
-use actix_web::{web, HttpRequest, HttpResponse, post, get};
+use actix_web::{web, HttpRequest, HttpResponse, post};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
@@ -64,13 +63,13 @@ pub struct SubmitRun {
 /// file.
 #[utoipa::path(
     post,
-    path = "/travel/submit/run",
+    path = "/trekkie",
     responses(
         (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/travel/submit/run")]
+#[post("/trekkie")]
 pub async fn travel_submit_run_v1(
     pool: web::Data<DbPool>,
     user: Identity,
@@ -118,13 +117,13 @@ pub async fn travel_submit_run_v1(
 /// file.
 #[utoipa::path(
     post,
-    path = "/travel/submit/run",
+    path = "/trekkie",
     responses(
         (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/travel/submit/run")]
+#[post("/trekkie")]
 pub async fn travel_submit_run_v2(
     pool: web::Data<DbPool>,
     user: Identity,
@@ -173,13 +172,13 @@ pub async fn travel_submit_run_v2(
 /// file.
 #[utoipa::path(
     post,
-    path = "/travel/submit/gps/{}",
+    path = "/trekkie/{id}/live",
     responses(
         (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/travel/submit/gps/{id}")]
+#[post("/trekkie/{id}/live")]
 pub async fn submit_gps_live(
     pool: web::Data<DbPool>,
     user: Identity,
@@ -245,13 +244,13 @@ pub async fn submit_gps_live(
 /// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
     post,
-    path = "/travel/submit/gpx/{id}",
+    path = "/trekkie/{id}/gpx",
     responses(
         (status = 200, description = "gpx file was successfully submitted", body = SubmitFile),
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/travel/submit/gpx/{id}")]
+#[post("/trekkie/{id}/gpx")]
 pub async fn travel_file_upload(
     pool: web::Data<DbPool>,
     user: Identity,
@@ -360,41 +359,3 @@ pub async fn travel_file_upload(
     }
 }
 
-/// Takes the gpx file saves it and returns the travel id
-#[utoipa::path(
-    get,
-    path = "/travel/submit/list",
-    responses(
-        (status = 200, description = "returns old measurements", body = Vec<TrekkieRun>),
-        (status = 500, description = "postgres pool error")
-    ),
-)]
-#[get("/travel/submit/list")]
-pub async fn travel_list(
-    pool: web::Data<DbPool>,
-    user: Identity,
-    _req: HttpRequest,
-) -> Result<web::Json<Vec<TrekkieRun>>, ServerError> {
-    // getting the database connection from pool
-    let mut database_connection = match pool.get() {
-        Ok(conn) => conn,
-        Err(e) => {
-            error!("cannot get connection from connection pool {:?}", e);
-            return Err(ServerError::InternalError);
-        }
-    };
-
-    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
-    use tlms::schema::trekkie_runs::owner;
-
-    match trekkie_runs
-        .filter(owner.eq(Uuid::parse_str(&user.id().unwrap()).unwrap()))
-        .load::<TrekkieRun>(&mut database_connection)
-    {
-        Ok(value) => Ok(web::Json(value)),
-        Err(e) => {
-            error!("was unable runs for user with error {:?}", e);
-            Err(ServerError::InternalError)
-        }
-    }
-}
