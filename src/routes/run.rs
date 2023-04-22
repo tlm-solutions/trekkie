@@ -1,4 +1,4 @@
-use crate::routes::ServerError;
+use crate::routes::{ServerError, user::fetch_user};
 use crate::DbPool;
 
 use tlms::locations::gps::InsertGpsPoint;
@@ -17,9 +17,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use chrono::{DateTime, Utc, Duration};
 
-/// This model is needed after submitting a file the id references the id in the [`SubmitFile`] model.
-/// The vehicles are measurements intervals recording start / end and which vehicle in the city was
-/// taken
+/// This struct is send to trekkie to declare a trekkie run
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravelV1 {
     pub start: DateTime<Utc>,
@@ -29,6 +27,7 @@ pub struct SubmitTravelV1 {
     pub region: i64
 }
 
+/// This struct is send to trekkie to declare a trekkie run
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravelV2 {
     pub start: DateTime<Utc>,
@@ -37,7 +36,21 @@ pub struct SubmitTravelV2 {
     pub run: i32,
     pub region: i64,
     pub app_commit: String,
-    pub app_name: String
+    pub app_name: String,
+    pub finished: bool
+}
+
+/// GPS Struct
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct SubmitGpsPoint {
+    pub timestamp: DateTime<Utc>,
+    pub lat: f64,
+    pub lon: f64,
+    pub elevation: Option<f64>,
+    pub accuracy: Option<f64>,
+    pub vertical_accuracy: Option<f64>,
+    pub bearing: Option<f64>,
+    pub speed: Option<f64>,
 }
 
 /// This model is returned after uploading a file. It returns the travel id, which is used for
@@ -138,7 +151,7 @@ pub async fn travel_submit_run_v2(
             run: measurement.run,
             region: measurement.region,
             owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
-            finished: true,
+            finished: measurement.finished,
             correlated: false,
             app_commit: measurement.app_commit.clone(),
             app_name: measurement.app_name.clone()
@@ -155,10 +168,84 @@ pub async fn travel_submit_run_v2(
     }
 }
 
+
+/// This endpoint accepts measurement intervals that belong to the previously submitted gpx
+/// file.
+#[utoipa::path(
+    post,
+    path = "/travel/submit/gps/{}",
+    responses(
+        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
+#[post("/travel/submit/gps/{id}")]
+pub async fn submit_gps_live(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    gps_point: web::Json<SubmitGpsPoint>,
+    path: web::Path<(Uuid,)>,
+    _req: HttpRequest,
+) -> Result<HttpResponse, ServerError> {
+    // getting the database connection from pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    let user_session = fetch_user(user, &mut database_connection)?;
+
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::id as trekkie_id;
+
+    let trekkie_run = match trekkie_runs
+        .filter(trekkie_id.eq(path.0))
+        .first::<TrekkieRun>(&mut database_connection)
+    {
+        Ok(trekkie_run) => trekkie_run,
+        Err(e) => {
+            error!("database error while listing trekkie_runs {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
+        return Err(ServerError::Forbidden);
+    }
+    
+    use tlms::schema::gps_points::dsl::gps_points;
+
+    // taking all the points and inserting them into the database
+    match diesel::insert_into(gps_points)
+        .values(&InsertGpsPoint {
+            id: None,
+            trekkie_run: path.0,
+            timestamp: gps_point.timestamp.naive_utc(),
+            lat: gps_point.lat,
+            lon: gps_point.lon,
+            elevation: gps_point.elevation,
+            accuracy: gps_point.accuracy,
+            bearing: gps_point.bearing,
+            speed: gps_point.speed,
+            vertical_accuracy: gps_point.vertical_accuracy
+        })
+        .execute(&mut database_connection)
+    {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => {
+            error!("while trying to insert gps position run {:?}", e);
+            Err(ServerError::InternalError)
+        }
+    }
+}
+
 /// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
     post,
-    path = "/travel/submit/gpx/{}",
+    path = "/travel/submit/gpx/{id}",
     responses(
         (status = 200, description = "gpx file was successfully submitted", body = SubmitFile),
         (status = 500, description = "postgres pool error")
@@ -167,7 +254,7 @@ pub async fn travel_submit_run_v2(
 #[post("/travel/submit/gpx/{id}")]
 pub async fn travel_file_upload(
     pool: web::Data<DbPool>,
-    _user: Identity,
+    user: Identity,
     mut payload: Multipart,
     path: web::Path<(Uuid,)>,
     _req: HttpRequest,
@@ -180,6 +267,27 @@ pub async fn travel_file_upload(
             return Err(ServerError::InternalError);
         }
     };
+
+    
+    let user_session = fetch_user(user, &mut database_connection)?;
+    
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::id as trekkie_id;
+
+    let trekkie_run = match trekkie_runs
+        .filter(trekkie_id.eq(path.0))
+        .first::<TrekkieRun>(&mut database_connection)
+    {
+        Ok(trekkie_run) => trekkie_run,
+        Err(e) => {
+            error!("database error while listing trekkie_runs {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
+        return Err(ServerError::Forbidden);
+    }
 
     // collection of gps points
     let mut point_list = Vec::new();
@@ -195,8 +303,6 @@ pub async fn travel_file_upload(
             let data = chunk.unwrap();
             buffer.extend(data);
         }
-
-        println!("debug gpx: {:?}", buffer);
 
         // Deserializing the string into a gpx object
         match gpx::read(buffer.as_ref()) {

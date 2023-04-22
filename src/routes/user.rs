@@ -1,14 +1,14 @@
 use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
-use tlms::management::user::{hash_password, verify_password, User};
+use tlms::management::user::{hash_password, verify_password, User, AuthorizedUser};
 
 use log::{error, info};
 use uuid::Uuid;
 
 use actix_identity::Identity;
 use actix_web::{web, HttpMessage, HttpRequest, post, get};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, PgConnection};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -25,6 +25,30 @@ pub struct UserCreation {
 pub struct UserLogin {
     pub user_id: Uuid,
     pub password: String,
+}
+
+
+/// takes a cookie and returnes the corresponging user struct
+pub fn fetch_user(
+    user: Identity,
+    database_connection: &mut PgConnection,
+) -> Result<AuthorizedUser, ServerError> {
+    // user uuid from currently authenticat
+    let user_id: Uuid = match user.id() {
+        Ok(found_id) => match Uuid::parse_str(&found_id) {
+            Ok(parsed_uuid) => parsed_uuid,
+            Err(e) => {
+                error!("problem with decoding id from cookie {:?}", e);
+                return Err(ServerError::BadClientData);
+            }
+        },
+        Err(e) => {
+            error!("problem with fetching id from cookie {:?}", e);
+            return Err(ServerError::BadClientData);
+        }
+    };
+
+    AuthorizedUser::from_postgres(&user_id, database_connection).ok_or(ServerError::BadClientData)
 }
 
 /// Request to this endpoint creates minimal and unpriviledged trekkie user. If the call was succesful
