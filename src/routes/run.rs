@@ -301,7 +301,7 @@ pub async fn terminate_run(
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(e) => {
             error!("cannot finish this trekkie run with error {:?}", e);
-            Err(ServerError::InternalError);
+            Err(ServerError::InternalError)
         }
     }
 }
