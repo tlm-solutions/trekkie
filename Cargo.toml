@@ -30,9 +30,14 @@ uuid = { version = "*", features = ["serde", "v4"] }
 env_logger = "0.10"
 log = "*"
 rand = "*"
+
 # hell
 gpx = { version = "0"}
 
 utoipa = { version = "3", features = ["actix_extras"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 futures = "0.3"
+
+# grpc
+
+tonic = "0.7"

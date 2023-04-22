@@ -1,6 +1,7 @@
 use crate::routes::{user::fetch_user, ServerError};
 use crate::DbPool;
 
+use tlms::grpc::GrpcGpsPoint;
 use tlms::locations::gps::InsertGpsPoint;
 use tlms::trekkie::TrekkieRun;
 
@@ -11,7 +12,7 @@ use chrono::{DateTime, Duration, Utc};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
-use log::error;
+use log::{error, warn};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -216,6 +217,36 @@ pub async fn submit_gps_live(
     if trekkie_run.finished {
         return Err(ServerError::Conflict);
     }
+
+    use tlms::grpc::chemo_client::ChemoClient;
+    
+    let grpc_host = std::env::var("CHEMO_GRPC").unwrap_or("http://127.0.0.1:3000".to_string());
+
+    match ChemoClient::connect(grpc_host.clone()).await {
+        Ok(mut client) => {
+            let grpc_gps = GrpcGpsPoint {
+                time: gps_point.timestamp.timestamp_millis() as u64,
+                id: 0,
+                region: trekkie_run.region,
+                lat: gps_point.lat,
+                lon: gps_point.lon,
+                line: trekkie_run.line,
+                run: trekkie_run.run
+            };
+
+            let request = tonic::Request::new(grpc_gps);
+            if let Err(e) = client.receive_gps(request).await {
+                warn!("Error while sending gps point: {:?}", e);
+            }
+        }
+        Err(e) => {
+            warn!(
+                "Cannot connect to GRPC Host: {} with error {:?}",
+                grpc_host, &e
+            );
+        }
+    };
+
 
     use tlms::schema::gps_points::dsl::gps_points;
 
