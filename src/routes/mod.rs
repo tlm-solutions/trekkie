@@ -65,10 +65,10 @@ impl error::ResponseError for ServerError {
         user::user_create
     ),
     components(schemas(
-        Response, 
-        user::UserCreation, 
-        user::UserLogin, 
-        run::SubmitTravelV1, 
+        Response,
+        user::UserCreation,
+        user::UserLogin,
+        run::SubmitTravelV1,
         run::SubmitTravelV2,
         run::SubmitGpsPoint
     ))

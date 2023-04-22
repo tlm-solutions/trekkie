@@ -1,4 +1,4 @@
-use crate::routes::{ServerError, user::fetch_user};
+use crate::routes::{user::fetch_user, ServerError};
 use crate::DbPool;
 
 use tlms::locations::gps::InsertGpsPoint;
@@ -6,7 +6,8 @@ use tlms::trekkie::TrekkieRun;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
-use actix_web::{web, HttpRequest, HttpResponse, post, delete};
+use actix_web::{delete, post, web, HttpRequest, HttpResponse};
+use chrono::{DateTime, Duration, Utc};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
@@ -14,7 +15,6 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-use chrono::{DateTime, Utc, Duration};
 
 /// This struct is send to trekkie to declare a trekkie run
 #[derive(Serialize, Deserialize, ToSchema)]
@@ -23,7 +23,7 @@ pub struct SubmitTravelV1 {
     pub stop: DateTime<Utc>,
     pub line: i32,
     pub run: i32,
-    pub region: i64
+    pub region: i64,
 }
 
 /// This struct is send to trekkie to declare a trekkie run
@@ -36,7 +36,7 @@ pub struct SubmitTravelV2 {
     pub region: i64,
     pub app_commit: String,
     pub app_name: String,
-    pub finished: bool
+    pub finished: bool,
 }
 
 /// GPS Struct
@@ -99,7 +99,7 @@ pub async fn travel_submit_run_v1(
             finished: true,
             correlated: false,
             app_commit: "0000000000000000000000000000000000000000".to_string(),
-            app_name: "stasi".to_string()
+            app_name: "stasi".to_string(),
         })
         .execute(&mut database_connection)
     {
@@ -153,7 +153,7 @@ pub async fn travel_submit_run_v2(
             finished: measurement.finished,
             correlated: false,
             app_commit: measurement.app_commit.clone(),
-            app_name: measurement.app_name.clone()
+            app_name: measurement.app_name.clone(),
         })
         .execute(&mut database_connection)
     {
@@ -216,7 +216,7 @@ pub async fn submit_gps_live(
     if trekkie_run.finished {
         return Err(ServerError::Conflict);
     }
-    
+
     use tlms::schema::gps_points::dsl::gps_points;
 
     // taking all the points and inserting them into the database
@@ -231,7 +231,7 @@ pub async fn submit_gps_live(
             accuracy: gps_point.accuracy,
             bearing: gps_point.bearing,
             speed: gps_point.speed,
-            vertical_accuracy: gps_point.vertical_accuracy
+            vertical_accuracy: gps_point.vertical_accuracy,
         })
         .execute(&mut database_connection)
     {
@@ -271,8 +271,8 @@ pub async fn terminate_run(
     let user_session = fetch_user(user, &mut database_connection)?;
 
     use tlms::schema::trekkie_runs::dsl::trekkie_runs;
-    use tlms::schema::trekkie_runs::id as trekkie_id;
     use tlms::schema::trekkie_runs::finished;
+    use tlms::schema::trekkie_runs::id as trekkie_id;
 
     let trekkie_run = match trekkie_runs
         .filter(trekkie_id.eq(path.0))
@@ -296,17 +296,15 @@ pub async fn terminate_run(
     match diesel::update(trekkie_runs)
         .filter(trekkie_id.eq(path.0))
         .set(finished.eq(true))
-        .execute(&mut database_connection) {
+        .execute(&mut database_connection)
+    {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(e) => {
             error!("cannot finish this trekkie run with error {:?}", e);
-            return Err(ServerError::InternalError);
+            Err(ServerError::InternalError);
         }
     }
-    
 }
-
-
 
 /// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
@@ -334,9 +332,8 @@ pub async fn travel_file_upload(
         }
     };
 
-    
     let user_session = fetch_user(user, &mut database_connection)?;
-    
+
     use tlms::schema::trekkie_runs::dsl::trekkie_runs;
     use tlms::schema::trekkie_runs::id as trekkie_id;
 
@@ -353,10 +350,6 @@ pub async fn travel_file_upload(
 
     if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
         return Err(ServerError::Forbidden);
-    }
-
-    if trekkie_run.finished {
-        return Err(ServerError::Conflict);
     }
 
     // collection of gps points
@@ -429,4 +422,3 @@ pub async fn travel_file_upload(
         }
     }
 }
-

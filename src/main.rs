@@ -94,8 +94,7 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::run::travel_file_upload)
                     .service(routes::run::travel_submit_run_v1)
                     .service(routes::user::user_create)
-                    .service(routes::user::user_login)
-
+                    .service(routes::user::user_login),
             )
             .service(
                 web::scope("/v2")
@@ -104,8 +103,7 @@ async fn main() -> std::io::Result<()> {
                     .service(routes::run::submit_gps_live)
                     .service(routes::run::terminate_run)
                     .service(routes::user::user_create)
-                    .service(routes::user::user_login)
-
+                    .service(routes::user::user_login),
             )
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}")

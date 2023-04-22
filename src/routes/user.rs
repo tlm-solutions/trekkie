@@ -1,14 +1,14 @@
 use crate::routes::{Response, ServerError};
 use crate::DbPool;
 
-use tlms::management::user::{hash_password, verify_password, User, AuthorizedUser};
+use tlms::management::user::{hash_password, verify_password, AuthorizedUser, User};
 
 use log::{error, info};
 use uuid::Uuid;
 
 use actix_identity::Identity;
-use actix_web::{web, HttpMessage, HttpRequest, post};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, PgConnection};
+use actix_web::{post, web, HttpMessage, HttpRequest};
+use diesel::{ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl};
 use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -26,7 +26,6 @@ pub struct UserLogin {
     pub user_id: Uuid,
     pub password: String,
 }
-
 
 /// takes a cookie and returnes the corresponging user struct
 pub fn fetch_user(
