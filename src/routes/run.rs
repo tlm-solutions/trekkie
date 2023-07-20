@@ -2,13 +2,13 @@ use crate::routes::{user::fetch_user, ServerError};
 use crate::DbPool;
 
 use tlms::grpc::GrpcGpsPoint;
-use tlms::locations::gps::InsertGpsPoint;
+use tlms::locations::gps::{InsertGpsPoint, GpsPoint};
 use tlms::trekkie::TrekkieRun;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
 use actix_web::{delete, post, web, HttpRequest, HttpResponse};
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, Utc, TimeZone};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
@@ -30,14 +30,11 @@ pub struct SubmitTravelV1 {
 /// This struct is send to trekkie to declare a trekkie run
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct SubmitTravelV2 {
-    pub start: DateTime<Utc>,
-    pub stop: DateTime<Utc>,
     pub line: i32,
     pub run: i32,
     pub region: i64,
     pub app_commit: String,
     pub app_name: String,
-    pub finished: bool,
 }
 
 /// GPS Struct
@@ -145,13 +142,13 @@ pub async fn travel_submit_run_v2(
     match diesel::insert_into(trekkie_runs)
         .values(&TrekkieRun {
             id: run_id,
-            start_time: measurement.start.naive_utc(),
-            end_time: measurement.stop.naive_utc(),
+            start_time: Utc.timestamp_millis_opt(0).unwrap().naive_utc(),
+            end_time: Utc.timestamp_millis_opt(0).unwrap().naive_utc(),
             line: measurement.line,
             run: measurement.run,
             region: measurement.region,
             owner: Uuid::parse_str(&user.id().unwrap()).unwrap(),
-            finished: measurement.finished,
+            finished: false,
             correlated: false,
             app_commit: measurement.app_commit.clone(),
             app_name: measurement.app_name.clone(),
@@ -219,7 +216,7 @@ pub async fn submit_gps_live(
     }
 
     use tlms::grpc::chemo_client::ChemoClient;
-    
+
     let grpc_host = std::env::var("CHEMO_GRPC").unwrap_or("http://127.0.0.1:3000".to_string());
 
     match ChemoClient::connect(grpc_host.clone()).await {
@@ -231,7 +228,7 @@ pub async fn submit_gps_live(
                 lat: gps_point.lat,
                 lon: gps_point.lon,
                 line: trekkie_run.line,
-                run: trekkie_run.run
+                run: trekkie_run.run,
             };
 
             let request = tonic::Request::new(grpc_gps);
@@ -246,7 +243,6 @@ pub async fn submit_gps_live(
             );
         }
     };
-
 
     use tlms::schema::gps_points::dsl::gps_points;
 
@@ -305,28 +301,64 @@ pub async fn terminate_run(
     use tlms::schema::trekkie_runs::finished;
     use tlms::schema::trekkie_runs::id as trekkie_id;
 
-    let trekkie_run = match trekkie_runs
+    let this_trekkie_run = match trekkie_runs
         .filter(trekkie_id.eq(path.0))
         .first::<TrekkieRun>(&mut database_connection)
     {
-        Ok(trekkie_run) => trekkie_run,
+        Ok(found_run) => found_run,
         Err(e) => {
             error!("database error while listing trekkie_runs {:?}", e);
             return Err(ServerError::InternalError);
         }
     };
 
-    if !(user_session.is_admin() || user_session.user.id == trekkie_run.owner) {
+    if !(user_session.is_admin() || user_session.user.id == this_trekkie_run.owner) {
         return Err(ServerError::Forbidden);
     }
 
-    if trekkie_run.finished {
+    if this_trekkie_run.finished {
+        error!("user tried to finish already finished trekkie run {:?}", &this_trekkie_run.id);
         return Err(ServerError::Conflict);
     }
 
+
+    use tlms::schema::gps_points::dsl::gps_points;
+    use tlms::schema::gps_points::{timestamp, trekkie_run};
+
+    let start_gps = match gps_points
+        .filter(trekkie_run.eq(path.0))
+        .order(timestamp.desc())
+        .limit(1) 
+        .first::<GpsPoint>(&mut database_connection) {
+            Ok(value) => value,
+            Err(e) => {
+                error!("cannot find gps points {:?}", &e);
+                return Err(ServerError::InternalError);
+            }
+    };
+
+
+    let end_gps = match gps_points
+        .filter(trekkie_run.eq(path.0))
+        .order(timestamp.asc())
+        .limit(1)
+        .first::<GpsPoint>(&mut database_connection) {
+            Ok(value) => value,
+            Err(e) => {
+                error!("cannot find gps points {:?}", &e);
+                return Err(ServerError::InternalError);
+            }
+    };
+    
+
+    use tlms::schema::trekkie_runs::{start_time, end_time};
     match diesel::update(trekkie_runs)
         .filter(trekkie_id.eq(path.0))
-        .set(finished.eq(true))
+        .set((
+            finished.eq(true),
+            start_time.eq(start_gps.timestamp),
+            end_time.eq(end_gps.timestamp)
+        ))
         .execute(&mut database_connection)
     {
         Ok(_) => Ok(HttpResponse::Ok().finish()),
