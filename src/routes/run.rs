@@ -2,13 +2,13 @@ use crate::routes::{user::fetch_user, ServerError};
 use crate::DbPool;
 
 use tlms::grpc::GrpcGpsPoint;
-use tlms::locations::gps::{InsertGpsPoint, GpsPoint};
+use tlms::locations::gps::{GpsPoint, InsertGpsPoint};
 use tlms::trekkie::TrekkieRun;
 
 use actix_identity::Identity;
 use actix_multipart::Multipart;
 use actix_web::{delete, post, web, HttpRequest, HttpResponse};
-use chrono::{DateTime, Duration, Utc, TimeZone};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use futures::{StreamExt, TryStreamExt};
 use gpx;
@@ -167,6 +167,107 @@ pub async fn travel_submit_run_v2(
 
 /// this endpoint takes live gps data from stasi apps
 #[utoipa::path(
+    delete,
+    path = "/trekkie/{id}",
+    responses(
+        (status = 200, description = "run was successfully terminated",),
+        (status = 500, description = "postgres pool error")
+    ),
+)]
+#[delete("/trekkie/{id}")]
+pub async fn terminate_run(
+    pool: web::Data<DbPool>,
+    user: Identity,
+    path: web::Path<(Uuid,)>,
+    _req: HttpRequest,
+) -> Result<HttpResponse, ServerError> {
+    // getting the database connection from pool
+    let mut database_connection = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("cannot get connection from connection pool {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    let user_session = fetch_user(user, &mut database_connection)?;
+
+    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
+    use tlms::schema::trekkie_runs::finished;
+    use tlms::schema::trekkie_runs::id as trekkie_id;
+
+    let this_trekkie_run = match trekkie_runs
+        .filter(trekkie_id.eq(path.0))
+        .first::<TrekkieRun>(&mut database_connection)
+    {
+        Ok(found_run) => found_run,
+        Err(e) => {
+            error!("database error while listing trekkie_runs {:?}", e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    if !(user_session.is_admin() || user_session.user.id == this_trekkie_run.owner) {
+        return Err(ServerError::Forbidden);
+    }
+
+    if this_trekkie_run.finished {
+        error!(
+            "user tried to finish already finished trekkie run {:?}",
+            &this_trekkie_run.id
+        );
+        return Err(ServerError::Conflict);
+    }
+
+    use tlms::schema::gps_points::dsl::gps_points;
+    use tlms::schema::gps_points::{timestamp, trekkie_run};
+
+    let start_gps = match gps_points
+        .filter(trekkie_run.eq(path.0))
+        .order(timestamp.desc())
+        .limit(1)
+        .first::<GpsPoint>(&mut database_connection)
+    {
+        Ok(value) => value,
+        Err(e) => {
+            error!("cannot find gps points {:?}", &e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    let end_gps = match gps_points
+        .filter(trekkie_run.eq(path.0))
+        .order(timestamp.asc())
+        .limit(1)
+        .first::<GpsPoint>(&mut database_connection)
+    {
+        Ok(value) => value,
+        Err(e) => {
+            error!("cannot find gps points {:?}", &e);
+            return Err(ServerError::InternalError);
+        }
+    };
+
+    use tlms::schema::trekkie_runs::{end_time, start_time};
+    match diesel::update(trekkie_runs)
+        .filter(trekkie_id.eq(path.0))
+        .set((
+            finished.eq(true),
+            start_time.eq(start_gps.timestamp),
+            end_time.eq(end_gps.timestamp),
+        ))
+        .execute(&mut database_connection)
+    {
+        Ok(_) => Ok(HttpResponse::Ok().finish()),
+        Err(e) => {
+            error!("cannot finish this trekkie run with error {:?}", e);
+            Err(ServerError::InternalError)
+        }
+    }
+}
+
+/// this endpoint takes live gps data from stasi apps
+#[utoipa::path(
     post,
     path = "/trekkie/{id}/live",
     responses(
@@ -265,105 +366,6 @@ pub async fn submit_gps_live(
         Ok(_) => Ok(HttpResponse::Ok().finish()),
         Err(e) => {
             error!("while trying to insert gps position run {:?}", e);
-            Err(ServerError::InternalError)
-        }
-    }
-}
-
-/// this endpoint takes live gps data from stasi apps
-#[utoipa::path(
-    delete,
-    path = "/trekkie/{id}",
-    responses(
-        (status = 200, description = "run was successfully terminated",),
-        (status = 500, description = "postgres pool error")
-    ),
-)]
-#[delete("/trekkie/{id}")]
-pub async fn terminate_run(
-    pool: web::Data<DbPool>,
-    user: Identity,
-    path: web::Path<(Uuid,)>,
-    _req: HttpRequest,
-) -> Result<HttpResponse, ServerError> {
-    // getting the database connection from pool
-    let mut database_connection = match pool.get() {
-        Ok(conn) => conn,
-        Err(e) => {
-            error!("cannot get connection from connection pool {:?}", e);
-            return Err(ServerError::InternalError);
-        }
-    };
-
-    let user_session = fetch_user(user, &mut database_connection)?;
-
-    use tlms::schema::trekkie_runs::dsl::trekkie_runs;
-    use tlms::schema::trekkie_runs::finished;
-    use tlms::schema::trekkie_runs::id as trekkie_id;
-
-    let this_trekkie_run = match trekkie_runs
-        .filter(trekkie_id.eq(path.0))
-        .first::<TrekkieRun>(&mut database_connection)
-    {
-        Ok(found_run) => found_run,
-        Err(e) => {
-            error!("database error while listing trekkie_runs {:?}", e);
-            return Err(ServerError::InternalError);
-        }
-    };
-
-    if !(user_session.is_admin() || user_session.user.id == this_trekkie_run.owner) {
-        return Err(ServerError::Forbidden);
-    }
-
-    if this_trekkie_run.finished {
-        error!("user tried to finish already finished trekkie run {:?}", &this_trekkie_run.id);
-        return Err(ServerError::Conflict);
-    }
-
-
-    use tlms::schema::gps_points::dsl::gps_points;
-    use tlms::schema::gps_points::{timestamp, trekkie_run};
-
-    let start_gps = match gps_points
-        .filter(trekkie_run.eq(path.0))
-        .order(timestamp.desc())
-        .limit(1) 
-        .first::<GpsPoint>(&mut database_connection) {
-            Ok(value) => value,
-            Err(e) => {
-                error!("cannot find gps points {:?}", &e);
-                return Err(ServerError::InternalError);
-            }
-    };
-
-
-    let end_gps = match gps_points
-        .filter(trekkie_run.eq(path.0))
-        .order(timestamp.asc())
-        .limit(1)
-        .first::<GpsPoint>(&mut database_connection) {
-            Ok(value) => value,
-            Err(e) => {
-                error!("cannot find gps points {:?}", &e);
-                return Err(ServerError::InternalError);
-            }
-    };
-    
-
-    use tlms::schema::trekkie_runs::{start_time, end_time};
-    match diesel::update(trekkie_runs)
-        .filter(trekkie_id.eq(path.0))
-        .set((
-            finished.eq(true),
-            start_time.eq(start_gps.timestamp),
-            end_time.eq(end_gps.timestamp)
-        ))
-        .execute(&mut database_connection)
-    {
-        Ok(_) => Ok(HttpResponse::Ok().finish()),
-        Err(e) => {
-            error!("cannot finish this trekkie run with error {:?}", e);
             Err(ServerError::InternalError)
         }
     }
