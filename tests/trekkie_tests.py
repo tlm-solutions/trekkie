@@ -6,7 +6,7 @@ OFFLINE = False
 VERBOSE = False
 
 OFFLINE_HOST = "http://localhost:8060"
-STAGING_HOST = "https://trekkie.borken.dvb.solutions"
+STAGING_HOST = "https://trekkie.borken.tlm.solutions"
 
 HOST = OFFLINE_HOST if OFFLINE else STAGING_HOST
 
@@ -29,14 +29,13 @@ requests_log.setLevel(logging.DEBUG)
 requests_log.propagate = True
 
 session = requests.Session()
-create_user_response = session.post(HOST + "/v2/user/create")
+create_user_response = session.post(HOST + "/v2/user")
 
 submit_run = session.post(HOST + "/v2/trekkie", json=init_json)
 print(submit_run)
 
 run_id = submit_run.json()["trekkie_run"];
+session.post(HOST + "/v2/trekkie/" + run_id + "/gpx", files=files)
 
-session.post(HOST + "/trekkie/" + run_id + "/gpx", files=files, json=times_json)
-
-session.delete(HOST + "/trekkie/" + run_id + "")
+session.delete(HOST + "/v2/trekkie/" + run_id )
 

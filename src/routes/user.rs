@@ -54,7 +54,7 @@ pub fn fetch_user(
 /// user information and a session cookie are returned
 #[utoipa::path(
     post,
-    path = "/user",
+    path = "/v2/user",
     responses(
         (status = 200, description = "trekkie user was successfully created", body = crate::routes::UserCreation),
         (status = 500, description = "postgres pool error")
@@ -124,7 +124,7 @@ pub async fn user_create(
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/auth/login")]
+#[post("/v2/auth/login")]
 pub async fn user_login(
     pool: web::Data<DbPool>,
     body: web::Json<UserLogin>,

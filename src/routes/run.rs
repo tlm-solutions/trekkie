@@ -61,7 +61,7 @@ pub struct SubmitRun {
 /// file.
 #[utoipa::path(
     post,
-    path = "/trekkie",
+    path = "/v2/trekkie",
     responses(
         (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
@@ -115,7 +115,7 @@ pub async fn travel_submit_run_v1(
 /// file.
 #[utoipa::path(
     post,
-    path = "/trekkie",
+    path = "/v2/trekkie",
     responses(
         (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
@@ -168,7 +168,7 @@ pub async fn travel_submit_run_v2(
 /// this endpoint takes live gps data from stasi apps
 #[utoipa::path(
     delete,
-    path = "/trekkie/{id}",
+    path = "/v2/trekkie/{id}",
     responses(
         (status = 200, description = "run was successfully terminated",),
         (status = 500, description = "postgres pool error")
@@ -269,7 +269,7 @@ pub async fn terminate_run(
 /// this endpoint takes live gps data from stasi apps
 #[utoipa::path(
     post,
-    path = "/trekkie/{id}/live",
+    path = "/v2/trekkie/{id}/live",
     responses(
         (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
         (status = 500, description = "postgres pool error")
@@ -374,9 +374,9 @@ pub async fn submit_gps_live(
 /// Takes the gpx file, saves it, and returns the travel id
 #[utoipa::path(
     post,
-    path = "/trekkie/{id}/gpx",
+    path = "/v2/trekkie/{id}/gpx",
     responses(
-        (status = 200, description = "gpx file was successfully submitted", body = SubmitFile),
+        (status = 200, description = "gpx file was successfully submitted"),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -447,11 +447,15 @@ pub async fn travel_file_upload(
                                 lon: point.point().x(), // ambiguous for coordinates on a map
                                 elevation: point.elevation,
                                 timestamp: match point.time {
-                                    Some(time) => chrono::naive::NaiveDateTime::parse_from_str(
+                                    Some(time) => match chrono::naive::NaiveDateTime::parse_from_str(
                                         &time.format().unwrap(),
                                         "%Y-%m-%dT%H:%M:%SZ",
-                                    )
-                                    .unwrap(), //TODO: fix the unwrap
+                                    ) {
+                                        Ok(result) => result,
+                                        Err(_) => {
+                                            return Err(ServerError::BadClientData);
+                                        }
+                                    },
                                     None => break,
                                 },
 
