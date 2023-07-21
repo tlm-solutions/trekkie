@@ -273,13 +273,13 @@ pub async fn submit_gps_live(
 /// this endpoint takes live gps data from stasi apps
 #[utoipa::path(
     delete,
-    path = "/trekkie/{id}/live",
+    path = "/trekkie/{id}",
     responses(
         (status = 200, description = "run was successfully terminated",),
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[delete("/trekkie/{id}/live")]
+#[delete("/trekkie/{id}")]
 pub async fn terminate_run(
     pool: web::Data<DbPool>,
     user: Identity,

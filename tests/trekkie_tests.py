@@ -6,18 +6,18 @@ OFFLINE = False
 VERBOSE = False
 
 OFFLINE_HOST = "http://localhost:8060"
-STAGING_HOST = "https://trekkie.staging.dvb.solutions"
+STAGING_HOST = "https://trekkie.borken.dvb.solutions"
 
 HOST = OFFLINE_HOST if OFFLINE else STAGING_HOST
 
 files = {"upload_file": open("test.gpx", "rb")}
 
-times_json =  {
-            "start": "2022-09-10T14:46:30.290072949",
-            "stop": "2022-09-10T15:16:25.754147203",
+init_json =  {
             "line": 63,
             "run": 8,
             "region": 0,
+            "app_commit": "EEEEE",
+            "app_name": "test"
 }
 
 # this enables higly verbose logging for debug purposes
@@ -29,12 +29,14 @@ requests_log.setLevel(logging.DEBUG)
 requests_log.propagate = True
 
 session = requests.Session()
-create_user_response = session.post(HOST + "/user/create")
+create_user_response = session.post(HOST + "/v2/user/create")
 
-submit_run = session.post(HOST + "/travel/submit/run", json=times_json)
+submit_run = session.post(HOST + "/v2/trekkie", json=init_json)
 print(submit_run)
 
-times_json["trekkie_run"] = submit_run.json()["trekkie_run"]
-submit_gpx = session.post(HOST + "/travel/submit/gpx", files=files, json=times_json)
+run_id = submit_run.json()["trekkie_run"];
 
+session.post(HOST + "/trekkie/" + run_id + "/gpx", files=files, json=times_json)
+
+session.delete(HOST + "/trekkie/" + run_id + "")
 
