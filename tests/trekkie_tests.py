@@ -12,13 +12,7 @@ HOST = OFFLINE_HOST if OFFLINE else STAGING_HOST
 
 files = {"upload_file": open("test.gpx", "rb")}
 
-init_json =  {
-            "line": 63,
-            "run": 8,
-            "region": 0,
-            "app_commit": "EEEEE",
-            "app_name": "test"
-}
+init_json = {"line": 63, "run": 8, "region": 0, "app_commit": "EEEEE", "app_name": "test"}
 
 # this enables higly verbose logging for debug purposes
 http_client.HTTPConnection.debuglevel = 1
@@ -34,8 +28,16 @@ create_user_response = session.post(HOST + "/v2/user")
 submit_run = session.post(HOST + "/v2/trekkie", json=init_json)
 print(submit_run)
 
-run_id = submit_run.json()["trekkie_run"];
+run_id = submit_run.json()["trekkie_run"]
 session.post(HOST + "/v2/trekkie/" + run_id + "/gpx", files=files)
 
-session.delete(HOST + "/v2/trekkie/" + run_id )
+session.post(
+    HOST + "/v2/trekkie/" + run_id + "/live",
+    json={
+        "timestamp": "2023-07-21T14:34:05Z",
+        "lat": 0.0,
+        "lon": 0.0,
+    },
+)
 
+session.delete(HOST + "/v2/trekkie/" + run_id)
