@@ -16,16 +16,28 @@
     utils = {
       url = "github:numtide/flake-utils";
     };
+
+    fenix = {
+      url = "github:nix-community/fenix";
+    };
   };
 
-  outputs = inputs@{ self, nixpkgs, naersk, tlms-rs, utils, ... }:
+  outputs = inputs@{ self, nixpkgs, naersk, tlms-rs, utils, fenix, ... }:
     utils.lib.eachDefaultSystem
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
 
+          toolchain = with fenix.packages.${system}; combine [
+            latest.cargo
+            latest.rustc
+          ];
+
           package = pkgs.callPackage ./derivation.nix {
-            naersk = naersk.lib.${system};
+            buildPackage = (naersk.lib.${system}.override {
+              cargo = toolchain;
+              rustc = toolchain;
+            }).buildPackage;
           };
 
           test-vm-pkg = self.nixosConfigurations.trekkie-mctest.config.system.build.vm;

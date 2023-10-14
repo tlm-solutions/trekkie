@@ -1,6 +1,6 @@
-{ naersk, gnumake, src, lib, pkg-config, cmake, protobuf, postgresql, zlib, openssl}:
+{ buildPackage, gnumake, src, lib, pkg-config, cmake, protobuf, postgresql, zlib, openssl}:
 
-naersk.buildPackage {
+buildPackage {
   pname = "trekkie";
   version = "0.2.1";
 
