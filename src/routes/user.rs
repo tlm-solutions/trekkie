@@ -60,7 +60,7 @@ pub fn fetch_user(
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/v2/user")]
+#[post("/user")]
 pub async fn user_create(
     pool: web::Data<DbPool>,
     req: HttpRequest,
@@ -124,7 +124,7 @@ pub async fn user_create(
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/v2/auth/login")]
+#[post("/auth/login")]
 pub async fn user_login(
     pool: web::Data<DbPool>,
     body: web::Json<UserLogin>,
