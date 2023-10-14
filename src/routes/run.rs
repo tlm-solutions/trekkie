@@ -324,7 +324,7 @@ pub async fn submit_gps_live(
             error!("NO grpc specified");
             return Err(ServerError::InternalError);
         }
-    }
+    };
 
     match ChemoClient::connect(grpc_host.clone()).await {
         Ok(mut client) => {
