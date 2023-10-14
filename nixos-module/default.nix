@@ -146,7 +146,7 @@ in
             "TREKKIE_POSTGRES_DATABASE" = "${cfg.database.database}";
             "TREKKIE_REDIS_PORT" = "${toString cfg.redis.port}";
             "TREKKIE_REDIS_HOST" = "${cfg.redis.host}";
-            "CHEMO_GRPC" = "${cfg.grpc.host}:${toString cfg.grpc.port}";
+            "CHEMO_GRPC" = "http://${cfg.grpc.host}:${toString cfg.grpc.port}";
           };
 
           serviceConfig = {
