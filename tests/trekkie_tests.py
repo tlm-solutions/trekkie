@@ -15,8 +15,8 @@ files = {"upload_file": open("test.gpx", "rb")}
 init_json = {"line": 63, "run": 8, "region": 0, "app_commit": "EEEEE", "app_name": "test"}
 
 # this enables higly verbose logging for debug purposes
-#http_client.HTTPConnection.debuglevel = 1
-#logging.basicConfig()
+http_client.HTTPConnection.debuglevel = 1
+logging.basicConfig()
 #logging.getLogger().setLevel(logging.DEBUG)
 #requests_log = logging.getLogger("requests.packages.urllib3")
 #requests_log.setLevel(logging.DEBUG)

@@ -85,15 +85,15 @@ dependencies = [
 
 [[package]]
 name = "actix-identity"
-version = "0.6.0"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36e1cc6f95e245b2f3c6995df4e1c0c697704c48c28ec325d135a3ca039d4952"
+checksum = "1224c9f9593dc27c9077b233ce04adedc1d7febcfc35ee9f53ea3c24df180bec"
 dependencies = [
  "actix-service",
- "actix-session 0.8.0",
+ "actix-session",
  "actix-utils",
  "actix-web",
- "derive_more",
+ "anyhow",
  "futures-core",
  "serde",
  "tracing",
@@ -235,23 +235,6 @@ dependencies = [
  "derive_more",
  "futures-core",
  "rand",
- "serde",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "actix-session"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e6a28f813a6671e1847d005cad0be36ae4d016287690f765c303379837c13d6"
-dependencies = [
- "actix-service",
- "actix-utils",
- "actix-web",
- "anyhow",
- "async-trait",
- "derive_more",
  "serde",
  "serde_json",
  "tracing",
@@ -2961,7 +2944,7 @@ dependencies = [
  "actix",
  "actix-identity",
  "actix-multipart",
- "actix-session 0.7.2",
+ "actix-session",
  "actix-web",
  "chrono",
  "clap",

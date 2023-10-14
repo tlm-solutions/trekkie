@@ -11,7 +11,7 @@ clap = { version = "4.1", features = ["derive"] }
 # webserver shit
 actix = "0.13"
 actix-web = "4.0"
-actix-identity = "*"
+actix-identity = "0.5"
 actix-session = { version = "0.7", features = ["redis-actor-session"] }
 actix-multipart = "*"
 derive_more = "0"
