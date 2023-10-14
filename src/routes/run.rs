@@ -224,7 +224,7 @@ pub async fn terminate_run(
 
     let start_gps = match gps_points
         .filter(trekkie_run.eq(path.0))
-        .order(timestamp.desc())
+        .order(timestamp.asc())
         .limit(1)
         .first::<GpsPoint>(&mut database_connection)
     {
@@ -237,7 +237,7 @@ pub async fn terminate_run(
 
     let end_gps = match gps_points
         .filter(trekkie_run.eq(path.0))
-        .order(timestamp.asc())
+        .order(timestamp.desc())
         .limit(1)
         .first::<GpsPoint>(&mut database_connection)
     {
