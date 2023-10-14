@@ -81,6 +81,22 @@ in
         '';
       };
     };
+    grpc = {
+      host = mkOption {
+        type = types.str;
+        default = "127.0.0.1";
+        description = ''
+          To which address trekkie should connect
+        '';
+      };
+      port = mkOption {
+        type = types.port;
+        default = 8080;
+        description = ''
+          On which port the service runs
+        '';
+      };
+    };
     user = mkOption {
       type = types.str;
       default = "trekkie";
@@ -130,6 +146,7 @@ in
             "TREKKIE_POSTGRES_DATABASE" = "${cfg.database.database}";
             "TREKKIE_REDIS_PORT" = "${toString cfg.redis.port}";
             "TREKKIE_REDIS_HOST" = "${cfg.redis.host}";
+            "CHEMO_GRPC" = "${cfg.grpc.host}:${toString cfg.grpc.port}";
           };
 
           serviceConfig = {

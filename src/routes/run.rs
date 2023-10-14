@@ -318,7 +318,13 @@ pub async fn submit_gps_live(
 
     use tlms::grpc::chemo_client::ChemoClient;
 
-    let grpc_host = std::env::var("CHEMO_GRPC").unwrap_or("http://127.0.0.1:3000".to_string());
+    let grpc_host = match std::env::var("CHEMO_GRPC")  {
+        Ok(value) => value,
+        Err(e) => {
+            error!("NO grpc specified");
+            return Err(ServerError::InternalError);
+        }
+    }
 
     match ChemoClient::connect(grpc_host.clone()).await {
         Ok(mut client) => {
