@@ -60,7 +60,7 @@ pub fn fetch_user(
         (status = 500, description = "postgres pool error")
     ),
 )]
-#[post("/user")]
+#[post("/v2/user")]
 pub async fn user_create(
     pool: web::Data<DbPool>,
     req: HttpRequest,
@@ -117,7 +117,7 @@ pub async fn user_create(
 /// Sends user credentials to the server. If they are correct a session cookie is set.
 #[utoipa::path(
     post,
-    path = "/user/login",
+    path = "/v2/auth/login",
     request_body = UserLogin,
     responses(
         (status = 200, description = "trekkie user was successfully logged in", body = crate::routes::Response),
