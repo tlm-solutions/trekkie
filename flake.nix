@@ -69,6 +69,12 @@
               ${self.packages.${system}.test-vm}/bin/run-nixos-vm
             '';
             default = package;
+            docs = (pkgs.nixosOptionsDoc {
+              options = (nixpkgs.lib.nixosSystem {
+                inherit system;
+                modules = [ self.nixosModules.default ];
+              }).options.TLMS;
+            }).optionsCommonMark;
           };
 
           # to get yourself a virtualized testing playground:
