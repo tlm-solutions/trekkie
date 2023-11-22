@@ -63,7 +63,7 @@ pub struct SubmitRun {
     post,
     path = "/v2/trekkie",
     responses(
-        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
+        (status = 200, description = "travel was successfully submitted", body = SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -117,7 +117,7 @@ pub async fn travel_submit_run_v1(
     post,
     path = "/v2/trekkie",
     responses(
-        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
+        (status = 200, description = "travel was successfully submitted", body = SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -271,7 +271,7 @@ pub async fn terminate_run(
     post,
     path = "/v2/trekkie/{id}/live",
     responses(
-        (status = 200, description = "travel was successfully submitted", body = crate::routes::SubmitRun),
+        (status = 200, description = "travel was successfully submitted", body = SubmitRun),
         (status = 500, description = "postgres pool error")
     ),
 )]

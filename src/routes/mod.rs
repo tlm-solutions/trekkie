@@ -70,7 +70,8 @@ impl error::ResponseError for ServerError {
         user::UserLogin,
         run::SubmitTravelV1,
         run::SubmitTravelV2,
-        run::SubmitGpsPoint
+        run::SubmitGpsPoint,
+        run::SubmitRun
     ))
 )]
 pub struct ApiDoc;

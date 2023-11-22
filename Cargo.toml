@@ -34,7 +34,7 @@ rand = "*"
 # hell
 gpx = { version = "0"}
 
-utoipa = { version = "3", features = ["actix_extras"] }
+utoipa = { version = "3", features = ["actix_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "3", features = ["actix-web"] }
 futures = "0.3"
 

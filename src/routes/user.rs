@@ -56,7 +56,7 @@ pub fn fetch_user(
     post,
     path = "/v2/user",
     responses(
-        (status = 200, description = "trekkie user was successfully created", body = crate::routes::UserCreation),
+        (status = 200, description = "trekkie user was successfully created", body = UserCreation),
         (status = 500, description = "postgres pool error")
     ),
 )]
@@ -120,7 +120,7 @@ pub async fn user_create(
     path = "/v2/auth/login",
     request_body = UserLogin,
     responses(
-        (status = 200, description = "trekkie user was successfully logged in", body = crate::routes::Response),
+        (status = 200, description = "trekkie user was successfully logged in", body = Response),
         (status = 500, description = "postgres pool error")
     ),
 )]
