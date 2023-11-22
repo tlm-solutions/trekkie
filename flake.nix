@@ -48,7 +48,7 @@
           packages = {
             trekkie = package;
             test-vm = test-vm-pkg;
-            test-vm-wrapper = pkgs.writeScriptBin "trekkie-test-vm-wrapper"
+            test-vm-wrapper = pkgs.writeScript "trekkie-test-vm-wrapper"
             ''
               set -e
 
