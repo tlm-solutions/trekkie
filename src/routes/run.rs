@@ -455,7 +455,7 @@ pub async fn travel_file_upload(
                                 timestamp: match point.time {
                                     Some(time) => match chrono::naive::NaiveDateTime::parse_from_str(
                                         &time.format().unwrap(),
-                                        "%Y-%m-%dT%H:%M:%SZ",
+                                        "%Y-%m-%dT%H:%M:%S.%fZ",
                                     ) {
                                         Ok(result) => result,
                                         Err(e) => {
