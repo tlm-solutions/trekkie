@@ -458,7 +458,8 @@ pub async fn travel_file_upload(
                                         "%Y-%m-%dT%H:%M:%SZ",
                                     ) {
                                         Ok(result) => result,
-                                        Err(_) => {
+                                        Err(e) => {
+                                            error!("cannot parse timestamp {e}");
                                             return Err(ServerError::BadClientData);
                                         }
                                     },
@@ -475,7 +476,7 @@ pub async fn travel_file_upload(
                         }
                     }
                 }
-            }
+            },
             Err(e) => {
                 error!("cannot convert multipart string into gpx {:?}", e);
                 return Err(ServerError::BadClientData);
