@@ -173,5 +173,6 @@ in
       uid = 1502;
       extraGroups = [ config.users.groups."TLMS-radio".name ];
     };
+    users.groups."${cfg.group}" = {};
   };
 }
