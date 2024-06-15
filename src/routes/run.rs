@@ -318,9 +318,9 @@ pub async fn submit_gps_live(
 
     use tlms::grpc::chemo_client::ChemoClient;
 
-    let grpc_host = match std::env::var("CHEMO_GRPC")  {
+    let grpc_host = match std::env::var("CHEMO_GRPC") {
         Ok(value) => value,
-        Err(e) => {
+        Err(_e) => {
             error!("NO grpc specified");
             return Err(ServerError::InternalError);
         }
@@ -453,16 +453,18 @@ pub async fn travel_file_upload(
                                 lon: point.point().x(), // ambiguous for coordinates on a map
                                 elevation: point.elevation,
                                 timestamp: match point.time {
-                                    Some(time) => match chrono::naive::NaiveDateTime::parse_from_str(
-                                        &time.format().unwrap(),
-                                        "%Y-%m-%dT%H:%M:%S.%fZ",
-                                    ) {
-                                        Ok(result) => result,
-                                        Err(e) => {
-                                            error!("cannot parse timestamp {e}");
-                                            return Err(ServerError::BadClientData);
+                                    Some(time) => {
+                                        match chrono::naive::NaiveDateTime::parse_from_str(
+                                            &time.format().unwrap(),
+                                            "%Y-%m-%dT%H:%M:%S.%fZ",
+                                        ) {
+                                            Ok(result) => result,
+                                            Err(e) => {
+                                                error!("cannot parse timestamp {e}");
+                                                return Err(ServerError::BadClientData);
+                                            }
                                         }
-                                    },
+                                    }
                                     None => break,
                                 },
 
@@ -476,7 +478,7 @@ pub async fn travel_file_upload(
                         }
                     }
                 }
-            },
+            }
             Err(e) => {
                 error!("cannot convert multipart string into gpx {:?}", e);
                 return Err(ServerError::BadClientData);

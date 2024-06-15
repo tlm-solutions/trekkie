@@ -25,9 +25,6 @@ pub enum ServerError {
     #[display(fmt = "Bad Request")]
     BadClientData,
 
-    #[display(fmt = "Unauthorized")]
-    Unauthorized,
-
     #[display(fmt = "Forbidden")]
     Forbidden,
 
@@ -46,7 +43,6 @@ impl error::ResponseError for ServerError {
         match *self {
             ServerError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
             ServerError::BadClientData => StatusCode::BAD_REQUEST,
-            ServerError::Unauthorized => StatusCode::UNAUTHORIZED,
             ServerError::Forbidden => StatusCode::FORBIDDEN,
             ServerError::Conflict => StatusCode::CONFLICT,
         }
