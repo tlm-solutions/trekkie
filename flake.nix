@@ -1,44 +1,19 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.05";
-
-    naersk = {
-      url = "github:nix-community/naersk";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    # needed to set up the schema in test vm database
-    tlms-rs = {
-      url = "github:tlm-solutions/tlms.rs";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
 
     utils = {
       url = "github:numtide/flake-utils";
     };
-
-    fenix = {
-      url = "github:nix-community/fenix";
-    };
   };
 
-  outputs = inputs@{ self, nixpkgs, naersk, tlms-rs, utils, fenix, ... }:
+  outputs = inputs@{ self, nixpkgs, utils, ... }:
     utils.lib.eachDefaultSystem
       (system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
 
-          toolchain = with fenix.packages.${system}; combine [
-            latest.cargo
-            latest.rustc
-          ];
-
-          package = pkgs.callPackage ./derivation.nix {
-            buildPackage = (naersk.lib.${system}.override {
-              cargo = toolchain;
-              rustc = toolchain;
-            }).buildPackage;
-          };
+          package = pkgs.callPackage ./package.nix { };
 
           test-vm-pkg = self.nixosConfigurations.trekkie-mctest.config.system.build.vm;
 
@@ -49,25 +24,25 @@
             trekkie = package;
             test-vm = test-vm-pkg;
             test-vm-wrapper = pkgs.writeScript "trekkie-test-vm-wrapper"
-            ''
-              set -e
+              ''
+                set -e
 
-              echo Trekkie-McTest: enterprise-grade, free-range, grass fed testing vm
-              echo
-              echo "ALL RELEVANT SERVICES WILL BE EXPOSED TO THE HOST:"
-              echo -e "Service\t\tPort"
-              echo -e "SSH:\t\t2222\troot:lol"
-              echo -e "postgres:\t8888"
-              echo -e "trekkie:\t8060"
-              echo -e "redis:\t\t8061"
-              echo
+                echo Trekkie-McTest: enterprise-grade, free-range, grass fed testing vm
+                echo
+                echo "ALL RELEVANT SERVICES WILL BE EXPOSED TO THE HOST:"
+                echo -e "Service\t\tPort"
+                echo -e "SSH:\t\t2222\troot:lol"
+                echo -e "postgres:\t8888"
+                echo -e "trekkie:\t8060"
+                echo -e "redis:\t\t8061"
+                echo
 
-              set -x
-              export QEMU_NET_OPTS="hostfwd=tcp::2222-:22,hostfwd=tcp::8888-:5432,hostfwd=tcp::8060-:8060,hostfwd=tcp::8061-:6379"
+                set -x
+                export QEMU_NET_OPTS="hostfwd=tcp::2222-:22,hostfwd=tcp::8888-:5432,hostfwd=tcp::8060-:8060,hostfwd=tcp::8061-:6379"
 
-              echo "running the vm now..."
-              ${self.packages.${system}.test-vm}/bin/run-nixos-vm
-            '';
+                echo "running the vm now..."
+                ${self.packages.${system}.test-vm}/bin/run-nixos-vm
+              '';
             default = package;
             docs = (pkgs.nixosOptionsDoc {
               options = (nixpkgs.lib.nixosSystem {
@@ -117,28 +92,8 @@
             nixpkgs.overlays = [
               self.overlays.default
             ];
-        }
+          }
         ];
       };
-      hydraJobs =
-        let
-          hydraSystems = [
-            "x86_64-linux"
-            "aarch64-linux"
-          ];
-        in
-        builtins.foldl'
-          (hydraJobs: system:
-            builtins.foldl'
-              (hydraJobs: pkgName:
-                nixpkgs.lib.recursiveUpdate hydraJobs {
-                  ${pkgName}.${system} = self.packages.${system}.${pkgName};
-                }
-              )
-              hydraJobs
-              (builtins.attrNames self.packages.${system})
-          )
-          { }
-          hydraSystems;
     };
 }

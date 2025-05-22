@@ -9,7 +9,7 @@ use uuid::Uuid;
 use actix_identity::Identity;
 use actix_web::{post, web, HttpMessage, HttpRequest};
 use diesel::{ExpressionMethods, PgConnection, QueryDsl, RunQueryDsl};
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
